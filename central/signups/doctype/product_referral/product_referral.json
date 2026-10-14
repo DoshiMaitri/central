@@ -25,7 +25,8 @@
    "label": "Referred Team",
    "options": "Team",
    "read_only": 1,
-   "reqd": 1
+   "reqd": 1,
+   "search_index": 1
   },
   {
    "description": "Empty for a signup to Frappe Cloud itself.",
@@ -49,7 +50,8 @@
    "label": "Affiliate",
    "options": "Affiliate",
    "read_only": 1,
-   "reqd": 1
+   "reqd": 1,
+   "search_index": 1
   },
   {
    "fieldname": "visit",
@@ -88,7 +90,7 @@
  ],
  "in_create": 1,
  "links": [],
- "modified": "2026-10-14 12:00:00.000000",
+ "modified": "2026-10-14 15:20:17.982549",
  "modified_by": "Administrator",
  "module": "Signups",
  "name": "Product Referral",

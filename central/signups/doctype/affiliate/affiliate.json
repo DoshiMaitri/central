@@ -1,7 +1,7 @@
 {
  "actions": [],
  "autoname": "AFF-.#####",
- "creation": "2026-10-14 12:00:00.000000",
+ "creation": "2026-10-14 12:00:00",
  "description": "A person who shares a link to Frappe Cloud or a Product and is credited for the signups it brings.",
  "doctype": "DocType",
  "engine": "InnoDB",
@@ -19,7 +19,6 @@
  ],
  "fields": [
   {
-   "description": "The person who shares the affiliate link.",
    "fieldname": "user",
    "fieldtype": "Link",
    "in_list_view": 1,
@@ -39,14 +38,15 @@
    "label": "Status",
    "options": "Pending\nActive\nRejected\nDisabled",
    "read_only": 1,
-   "reqd": 1
+   "reqd": 1,
+   "search_index": 1
   },
   {
    "fieldname": "column_break_identity",
    "fieldtype": "Column Break"
   },
   {
-   "description": "The code in the affiliate link /r/<code>. Central sets it once at approval. It never changes.",
+   "description": "The code in the affiliate link /r/CODE. Central sets it once at approval. It never changes.",
    "fieldname": "affiliate_code",
    "fieldtype": "Data",
    "in_list_view": 1,
@@ -85,7 +85,6 @@
    "fieldtype": "Column Break"
   },
   {
-   "description": "Shown to the applicant.",
    "fieldname": "rejection_reason",
    "fieldtype": "Small Text",
    "label": "Rejection Reason",
@@ -102,11 +101,11 @@
    "link_fieldname": "affiliate"
   }
  ],
- "modified": "2026-10-14 12:00:00.000000",
+ "modified": "2026-10-14 15:20:17.982549",
  "modified_by": "Administrator",
  "module": "Signups",
  "name": "Affiliate",
- "naming_rule": "Expression (old style)",
+ "naming_rule": "Expression",
  "owner": "Administrator",
  "permissions": [
   {

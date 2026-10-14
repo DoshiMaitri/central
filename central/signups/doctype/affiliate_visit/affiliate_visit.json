@@ -1,7 +1,7 @@
 {
  "actions": [],
  "autoname": "hash",
- "creation": "2026-10-14 12:00:00.000000",
+ "creation": "2026-10-14 12:00:00",
  "description": "A click on an affiliate link. Its name is stored in the visitor's cookie. It holds no personal data.",
  "doctype": "DocType",
  "engine": "InnoDB",
@@ -23,10 +23,10 @@
    "label": "Affiliate",
    "options": "Affiliate",
    "read_only": 1,
-   "reqd": 1
+   "reqd": 1,
+   "search_index": 1
   },
   {
-   "description": "Empty for a link to Frappe Cloud itself.",
    "fieldname": "product",
    "fieldtype": "Link",
    "in_list_view": 1,
@@ -78,7 +78,7 @@
    "link_fieldname": "visit"
   }
  ],
- "modified": "2026-10-14 12:00:00.000000",
+ "modified": "2026-10-14 15:20:17.982549",
  "modified_by": "Administrator",
  "module": "Signups",
  "name": "Affiliate Visit",

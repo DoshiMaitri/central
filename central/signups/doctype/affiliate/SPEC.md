@@ -46,7 +46,3 @@ The name is the unique key. The database refuses a second referral for the same 
 | Delete a Team that has a Product Referral | Refused. The referral keeps the team. |
 | Delete an Affiliate Visit that a Product Referral links to | Refused. |
 | Delete an Affiliate that has visits or referrals | Refused. Disable it instead. |
-
-## Future work
-
-- A job that deletes old visits. It must delete only visits that no Product Referral links to. The retention period is not decided.
