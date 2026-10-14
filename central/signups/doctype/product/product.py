@@ -10,6 +10,8 @@ from frappe.model.document import Document
 from frappe.utils import add_days, escape_html, formatdate, get_url, nowdate
 
 PRODUCT_KEY_PATTERN = re.compile(r"[a-z][a-z0-9-]*")
+# Stands for Frappe Cloud itself where a product key is expected, such as in a Product Referral name.
+FRAPPE_CLOUD_PRODUCT_KEY = "fc"
 # A Frappe app's module name, which Cargo writes as the image's app tag.
 # A path on the site itself, never another host.
 LANDING_ROUTE_PATTERN = re.compile(r"/[A-Za-z0-9_/-]*")
@@ -55,6 +57,9 @@ class Product(Document):
 	def validate(self) -> None:
 		if not PRODUCT_KEY_PATTERN.fullmatch(self.product_key or ""):
 			frappe.throw(_("Use lowercase letters, numbers and hyphens for the product key."))
+
+		if self.product_key == FRAPPE_CLOUD_PRODUCT_KEY:
+			frappe.throw(_("The product key {0} is reserved.").format(FRAPPE_CLOUD_PRODUCT_KEY))
 
 		if not self.is_new() and self.has_value_changed("product_key"):
 			frappe.throw(_("The product key cannot change after creation."))

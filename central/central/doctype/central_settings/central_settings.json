@@ -32,7 +32,9 @@
   "trial_servers_per_team",
   "trial_days",
   "trial_deletion_days",
-  "trial_notice_days"
+  "trial_notice_days",
+  "affiliates_section",
+  "affiliate_cookie_days"
  ],
  "fields": [
   {
@@ -217,13 +219,26 @@
    "fieldtype": "Int",
    "label": "Trial Notice Days",
    "non_negative": 1
+  },
+  {
+   "fieldname": "affiliates_section",
+   "fieldtype": "Section Break",
+   "label": "Affiliates"
+  },
+  {
+   "default": "30",
+   "description": "Days an affiliate link click is remembered. A signup after this gets no referral.",
+   "fieldname": "affiliate_cookie_days",
+   "fieldtype": "Int",
+   "label": "Affiliate Cookie Days",
+   "non_negative": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-10-11 10:00:00.000000",
+ "modified": "2026-10-14 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Central",
  "name": "Central Settings",

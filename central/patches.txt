@@ -40,3 +40,5 @@ central.patches.v0_0.seed_trial_settings
 # A trial site recorded before trials started on insert waited for readiness to start.
 central.patches.v0_0.start_unready_trials
 central.patches.v0_0.select_full_ubuntu_image
+# Affiliate Cookie Days reads 0 on a Central Settings saved before it existed.
+central.patches.v0_0.seed_affiliate_cookie_days
