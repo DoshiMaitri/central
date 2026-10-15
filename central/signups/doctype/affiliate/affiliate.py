@@ -173,11 +173,13 @@ class Affiliate(Document):
 
 
 def generate_affiliate_code() -> str:
-	"""A random code that no saved affiliate has. If a concurrent approval saves the same code
-	first, the unique index refuses this save and the operator approves again."""
+	"""A random code that no saved affiliate or named link has, because both share /r/. If a
+	concurrent save takes the same code first, its unique index refuses this save."""
 	for _attempt in range(CODE_ATTEMPTS):
 		code = "".join(secrets.choice(CODE_ALPHABET) for _position in range(CODE_LENGTH))
-		if not frappe.db.exists("Affiliate", {"affiliate_code": code}):
+		if not frappe.db.exists("Affiliate", {"affiliate_code": code}) and not frappe.db.exists(
+			"Affiliate Link", code
+		):
 			return code
 
 	frappe.throw(_("Could not create a unique affiliate code. Try again."))

@@ -10,7 +10,7 @@ from central.identity.doctype.team.team import Team
 from central.integrations.images import list_images
 from central.resource_actions import submit_request
 from central.server_models import DNS_LABEL, SiteCreation
-from central.signups.affiliate_cookie import record_referral
+from central.signups.affiliates.cookie import record_referral
 from central.signups.doctype.product.product import get_enabled_product_key, get_signup_product
 
 SIGNUP_FLOW = "Signup"

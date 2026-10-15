@@ -7,7 +7,7 @@ from frappe.auth import CookieManager
 from frappe.tests import IntegrationTestCase
 from frappe.utils import add_days, now_datetime, set_request
 
-from central.signups.affiliate_cookie import COOKIE_NAME, record_referral
+from central.signups.affiliates.cookie import COOKIE_NAME, record_referral
 from central.signups.doctype.affiliate.test_affiliate import make_affiliate
 from central.site_provisioning import create_trial_site, create_trial_team
 from central.tests.test_iam import ensure_user
@@ -113,7 +113,7 @@ class IntegrationTestAffiliateReferral(IntegrationTestCase):
 		self.browse({"fc": self.visit()})
 		errors = frappe.db.count("Error Log")
 
-		with patch("central.signups.affiliate_cookie.ProductReferral.record", side_effect=RuntimeError):
+		with patch("central.signups.affiliates.cookie.ProductReferral.record", side_effect=RuntimeError):
 			record_referral(self.team.name, None)
 
 		self.assertEqual(frappe.db.count("Error Log"), errors + 1)

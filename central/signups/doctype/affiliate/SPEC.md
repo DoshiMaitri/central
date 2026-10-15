@@ -11,6 +11,7 @@ All three DocTypes are in the Signups module. Only a System Manager can read, cr
 | DocType | Name | One record is |
 |---|---|---|
 | Affiliate | `AFF-00001` | A person who applied to be an affiliate. |
+| Affiliate Link | The slug, such as `bwh` | A named link an affiliate shares at `/r/<slug>`. It fixes the product, source and campaign of its visits. |
 | Affiliate Visit | A random hash | A click on an affiliate link, for one product and one set of UTM values. The visitor's cookie holds this name. |
 | Product Referral | `<team>::<product key>` | The affiliate credited with a team's signup for a product. |
 
@@ -25,7 +26,7 @@ All three DocTypes are in the Signups module. Only a System Manager can read, cr
 
 ### Affiliate Visit
 
-A visit holds the affiliate, the product, the `utm_source`, `utm_medium` and `utm_campaign` of the link, and Last Clicked On. An empty product is a link to Frappe Cloud itself. A visit holds no personal data: no IP address and no email.
+A visit holds the affiliate, the named link (empty for the main code), the product, the `utm_source`, `utm_medium` and `utm_campaign` of the link, the visitor's country and Last Clicked On. An empty product is a link to Frappe Cloud itself. A background job looks up the country from the visitor's IP address after the click, so the redirect does not wait. Central keeps only the country name, never the IP address or an email.
 
 ### Product Referral
 
@@ -58,9 +59,13 @@ Every signed-in user sees **Affiliate** in the console sidebar, at `/dashboard/a
 | Pending | The request is under review. |
 | Rejected | The reason, and **Request again**. |
 | Disabled | The account is paused. There is no button. |
-| Active | The link `/r/<code>` with a copy button, a link builder, the period, the funnel, tables by source and by product, and recent signups. |
+| Active | One page, top to bottom: five numbers (clicks, signups, paying customers, click to paid, and earnings per click), Performance Overview (clicks, signups and paying customers per day) with the main link and the link builder beside it, the conversion funnel, earnings by product and by campaign, Where your customers come from, the campaigns table, the Breakdown card, and Retention. |
 
-The link builder adds `product` (from `get_link_products`, the enabled products) and `utm_source` (`youtube`, `instagram`, `linkedin` or `other`). The period is the last 7, 30 or 90 days, or this year. The default is 30 days.
+The campaigns table shows the main link `/r/<code>` and every named link, with its name, product, source, clicks, signups and paying customers. Earnings by product is a table of each product's clicks, signups, paying customers, conversion rate (paying customers out of signups), earnings and earnings per click. Earnings by campaign is a ring chart of each campaign's share of the earnings, with the total in the middle. Both use the sample rate of 50 USD for each paying customer until commission is decided. Where your customers come from shows a world map with a dot for each country, sized by its signups, and the top 5 countries by signups with their conversion rate (paying customers out of signups). A country picker shows one country on the map. **View all countries** opens a scrollable list of every country with clicks, signups, paying customers and conversion rate. A country without a known position is listed but not drawn. The Breakdown card switches between Source and Product, each with clicks, signups and paying customers. An unknown country reads Unknown. Retention is the last section. It covers all time, not the period. See [Retention](#retention).
+
+Each number has a short explanation on hover. Clicks, signups, paying customers and earnings per click show the change against the period of the same length just before, as a percent. Clicks, signups and paying customers show a small daily trend. Click to paid shows how many clicks it counts.
+
+The link builder asks for a campaign, a product (from `get_link_products`, the enabled products), a source (`youtube`, `instagram`, `linkedin` or `other`) and an optional link slug. It shows a link only when the campaign is set. Without a link slug, it adds the choices to the main link as `product`, `utm_source` and `utm_campaign`, and the link is ready to copy. With a link slug, **Create link** saves a named link, and the builder shows `/r/<slug>` to copy. The period is a from and to date, both included, picked in the header. The picker also offers the last 7, 30 or 90 days and this year. The default is the last 30 days, and a cleared period falls back to it. A date after today cannot be picked. Commission is not decided yet, so **Earnings per click** uses a sample rate of 50 USD for each paying customer.
 
 ### Review
 
@@ -77,9 +82,13 @@ Every action locks the row. When an operator approves or rejects a request that 
 
 The code has 8 characters from lowercase letters and digits, without the look-alikes `0`, `o`, `1`, `l` and `i`. Central draws again when a code is taken. If two approvals draw the same new code at the same time, the second one fails and the operator approves again.
 
+### Named links
+
+An Active affiliate adds a named link with `POST central.api.affiliates.create_link(slug, product, utm_source, utm_campaign)` and lists them with `get_links`. The link is `/r/<slug>`, for example `/r/bwh`. A slug has 3 to 32 lowercase letters, numbers and hyphens, and starts and ends with a letter or number. Central saves it in lowercase. An empty slug gets a random one. A slug is unique across all affiliates, first come first served, and cannot be any affiliate's main code. An affiliate can have at most 100 links, and can add at most 30 in an hour. A link's product must be enabled, and a link must have a campaign.
+
 ### Affiliate link
 
-An Active affiliate shares `/r/<code>`, for example `/r/k7m2x9pa?product=raven&utm_source=youtube`. The code matches in any case. Central sends the visitor to `/dashboard/signup` with the `product`, `utm_source`, `utm_medium` and `utm_campaign` of the link. It ignores every other parameter, so the link cannot send a visitor to another site. The product key matches in any case. An unknown or disabled product is dropped, and the click counts for Frappe Cloud. The link answers GET and HEAD only, and the answer is never cached.
+An Active affiliate shares `/r/<code>` or a named link `/r/<slug>`. A named link fixes its product, source and campaign, and the query fills only what the link leaves empty. The main code takes them from the query, for example `/r/k7m2x9pa?product=raven&utm_source=youtube`, for example `/r/k7m2x9pa?product=raven&utm_source=youtube`. The code matches in any case. Central sends the visitor to `/dashboard/signup` with the `product`, `utm_source`, `utm_medium` and `utm_campaign` of the link. It ignores every other parameter, so the link cannot send a visitor to another site. The product key matches in any case. An unknown or disabled product is dropped, and the click counts for Frappe Cloud. The link answers GET and HEAD only, and the answer is never cached.
 
 A click records an Affiliate Visit and sets the `central_affiliate` cookie. The cookie holds one visit for each product key, such as `{"raven": "m3x8k2qa", "fc": "t7w2p5nc"}`. A new click for a product replaces that product's visit and leaves the others. A click with the same affiliate, product and UTM values as the browser's visit for that product updates Last Clicked On instead of adding a visit. The cookie is HttpOnly, SameSite Lax, Secure on HTTPS, and lasts Affiliate Cookie Days. Central ignores a cookie that it cannot read or that names a deleted visit.
 
@@ -118,13 +127,28 @@ An Active affiliate calls `GET central.api.affiliates.get_summary(from_date, to_
 |---|---|
 | Visited | Affiliate Visits created in the dates. A person who clicks links with different sources counts once for each. |
 | Signed up | Product Referrals created in the dates. |
+| Created a site | Of those referrals, the ones whose Team has a Site (of the referral's product, for a product referral). |
+| Added billing | Of those referrals, the ones whose Team has an Active Payment Method. |
 | Converted | Of those referrals, the ones whose Team has a Paid, Billable Invoice with Amount Paid above 0. |
+
+A later step implies the earlier ones, so a Team that paid also counts as Added billing and Created a site.
 
 A Frappe Cloud (`fc`) referral converts only when its Team has no product referral from any affiliate. Otherwise the payment belongs to the product referral. When a Team has two product referrals, both convert when the Team pays. An invoice paid only with credit does not convert. A refunded invoice still converts.
 
 Billing is in arrears, so a Team pays its first invoice some weeks after it signs up. A recent signup shows as not converted even when the customer will pay.
 
-The answer holds `totals`, `by_source` (by `utm_source`), `by_product` and up to 20 `recent_signups`, newest first. Each recent signup has the date, product, source and status (Signed up or Converted). An empty source or product reads `(none)`. The answer never names a Team. Any other user, or an affiliate that is not Active, is refused.
+The answer holds `totals`, `previous_totals` (the same numbers for the period of the same length just before), `daily` (clicks, signups and paying signups for every day, 0 on a quiet day; a paying signup counts on the day it signed up), `by_link` (the named link, or `(none)` for the main code), `by_source` (by `utm_source`), `by_product`, `by_country`. The link and country of a signup come from its visit. An empty source or product reads `(none)`. The answer never names a Team. Any other user, or an affiliate that is not Active, is refused.
+
+### Retention
+
+`GET central.api.affiliates.get_retention` shows how long the affiliate's paying customers keep paying. It is not tied to the period. A paying customer is a referred Team that converted, as in the summary. A customer counts in a month when it paid a Billable Invoice with Amount Paid above 0 in that month.
+
+| Value | Meaning |
+|---|---|
+| Customers | Paying customers of the affiliate. |
+| Active in the last 30 days, and in the last 90 days | Customers that paid an invoice in that time. The page also shows each as a percent of all paying customers. |
+| Trend | Customers that paid in each of the last 12 months, oldest first. The page draws the last 6 months beside the 30 day number, and all 12 beside the 90 day number. |
+| Curve | For month 1, 2, 3 and on, up to 12: of the customers whose first payment is at least that many full months back, the percent still paying that many months after it. A customer still pays until its last paid month. Recent customers count only for the months they have had. The page shows months 1, 3, 6 and 12 as bars, and a month no customer has reached yet as Not yet. |
 
 ## Configuration
 

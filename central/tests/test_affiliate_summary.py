@@ -6,6 +6,7 @@ from frappe.utils import add_days, now_datetime, today
 
 from central.api.affiliates import get_summary
 from central.signups.doctype.affiliate.test_affiliate import make_affiliate
+from central.signups.doctype.affiliate_link.affiliate_link import AffiliateLink
 from central.tests.test_iam import ensure_user
 
 
@@ -49,18 +50,96 @@ class IntegrationTestAffiliateSummary(IntegrationTestCase):
 
 		summary = self.summary()
 
-		self.assertEqual(summary["totals"], {"visited": 4, "signed_up": 4, "converted": 2})
+		self.assertEqual(
+			summary["totals"],
+			{"visited": 4, "signed_up": 4, "created_site": 2, "added_billing": 2, "converted": 2},
+		)
 		by_source = {row["source"]: row for row in summary["by_source"]}
 		self.assertEqual(
-			by_source["youtube"], {"source": "youtube", "visited": 2, "signed_up": 2, "converted": 2}
+			by_source["youtube"],
+			{
+				"source": "youtube",
+				"visited": 2,
+				"signed_up": 2,
+				"created_site": 2,
+				"added_billing": 2,
+				"converted": 2,
+			},
 		)
 		self.assertEqual(by_source["(none)"]["visited"], 1)
 		by_product = {row["product"]: row for row in summary["by_product"]}
 		self.assertEqual(
 			by_product["summary-raven"],
-			{"product": "summary-raven", "visited": 1, "signed_up": 1, "converted": 1},
+			{
+				"product": "summary-raven",
+				"visited": 1,
+				"signed_up": 1,
+				"created_site": 1,
+				"added_billing": 1,
+				"converted": 1,
+			},
 		)
 		self.assertEqual(by_product["(none)"]["signed_up"], 3)
+
+	def test_each_step_counts_the_teams_that_reached_it(self):
+		with_site = self.team("With Site")
+		self.referral(with_site, None, "youtube")
+		self.record("Site", team=with_site, product=None, subdomain="with-site")
+
+		with_billing = self.team("With Billing")
+		self.referral(with_billing, None, "youtube")
+		self.record("Payment Method", team=with_billing, status="Active")
+
+		other_product_site = self.team("Other Product Site")
+		self.referral(other_product_site, "summary-raven", "youtube")
+		self.record("Site", team=other_product_site, product=None, subdomain="other-product")
+
+		self.referral(self.team("Nothing Yet"), None, "youtube")
+
+		self.assertEqual(
+			self.summary()["totals"],
+			{"visited": 0, "signed_up": 4, "created_site": 2, "added_billing": 1, "converted": 0},
+		)
+
+	def test_daily_counts_cover_every_day(self):
+		self.visit("youtube", None)
+		self.visit("youtube", None, days_ago=3)
+		self.referral(self.team("Today"), None, "youtube")
+
+		daily = {row["day"]: row for row in self.summary()["daily"]}
+
+		self.assertEqual(len(daily), 8)
+		self.assertEqual(daily[today()], {"day": today(), "clicks": 1, "signups": 1, "paying": 0})
+		self.assertEqual(daily[str(add_days(today(), -3))]["clicks"], 1)
+		self.assertEqual(
+			daily[str(add_days(today(), -1))],
+			{"day": str(add_days(today(), -1)), "clicks": 0, "signups": 0, "paying": 0},
+		)
+
+	def test_the_previous_period_has_the_same_length(self):
+		self.visit("youtube", None)
+		self.visit("youtube", None, days_ago=10)
+		self.visit("youtube", None, days_ago=20)
+
+		summary = self.summary()
+
+		self.assertEqual(summary["totals"]["visited"], 1)
+		self.assertEqual(summary["previous_totals"]["visited"], 1)
+
+	def test_links_and_countries_come_from_the_visit(self):
+		AffiliateLink.create_for(self.affiliate.name, "summary-link", utm_campaign="launch")
+		visit = self.visit("youtube", None, link="summary-link", country="India")
+		self.visit("youtube", None, country="Germany")
+		self.referral(self.team("Linked"), None, "youtube", visit=visit)
+
+		summary = self.summary()
+
+		by_link = {row["link"]: row for row in summary["by_link"]}
+		self.assertEqual((by_link["summary-link"]["visited"], by_link["summary-link"]["signed_up"]), (1, 1))
+		self.assertEqual(by_link["(none)"]["visited"], 1)
+		by_country = {row["country"]: row for row in summary["by_country"]}
+		self.assertEqual((by_country["India"]["visited"], by_country["India"]["signed_up"]), (1, 1))
+		self.assertEqual(by_country["Germany"]["signed_up"], 0)
 
 	def test_a_product_referral_takes_the_conversion_from_a_frappe_cloud_referral(self):
 		team = self.team("Both")
@@ -73,24 +152,14 @@ class IntegrationTestAffiliateSummary(IntegrationTestCase):
 		frappe.set_user(frappe.db.get_value("Affiliate", self.other, "user"))
 		self.assertEqual(get_summary(add_days(today(), -7), today())["totals"]["converted"], 1)
 
-	def test_recent_signups_name_no_team(self):
+	def test_the_summary_names_no_team(self):
 		team = self.team("Secret Customer")
 		self.referral(team, "summary-raven", "youtube")
 		self.invoice(team)
 
 		summary = self.summary()
 
-		self.assertEqual(
-			summary["recent_signups"],
-			[
-				{
-					"date": frappe.utils.getdate(),
-					"product": "summary-raven",
-					"source": "youtube",
-					"status": "Converted",
-				}
-			],
-		)
+		self.assertEqual(summary["totals"]["converted"], 1)
 		self.assertNotIn(team, json.dumps(summary, default=str))
 		self.assertNotIn("Secret Customer", json.dumps(summary, default=str))
 
@@ -115,8 +184,13 @@ class IntegrationTestAffiliateSummary(IntegrationTestCase):
 		return get_summary(add_days(today(), -7), today())
 
 	def visit(
-		self, source: str | None, product: str | None, affiliate: str | None = None, days_ago: int = 0
-	) -> None:
+		self,
+		source: str | None,
+		product: str | None,
+		affiliate: str | None = None,
+		days_ago: int = 0,
+		**values,
+	) -> str:
 		visit = frappe.get_doc(
 			{
 				"doctype": "Affiliate Visit",
@@ -124,10 +198,13 @@ class IntegrationTestAffiliateSummary(IntegrationTestCase):
 				"product": product,
 				"utm_source": source,
 				"last_clicked_on": now_datetime(),
+				**values,
 			}
 		).insert()
 		if days_ago:
 			visit.db_set("creation", add_days(now_datetime(), -days_ago), update_modified=False)
+
+		return visit.name
 
 	def team(self, label: str) -> str:
 		owner = ensure_user(f"summary.{label.lower().replace(' ', '.')}@example.test")
@@ -142,7 +219,13 @@ class IntegrationTestAffiliateSummary(IntegrationTestCase):
 		return team.name
 
 	def referral(
-		self, team: str, product: str | None, source: str | None, affiliate: str | None = None
+		self,
+		team: str,
+		product: str | None,
+		source: str | None,
+		affiliate: str | None = None,
+		visit: str | None = None,
+		utm_campaign: str | None = None,
 	) -> None:
 		frappe.get_doc(
 			{
@@ -151,8 +234,16 @@ class IntegrationTestAffiliateSummary(IntegrationTestCase):
 				"product": product,
 				"affiliate": affiliate or self.affiliate.name,
 				"utm_source": source,
+				"utm_campaign": utm_campaign,
+				"visit": visit,
 			}
 		).insert()
+
+	def record(self, doctype: str, **values) -> None:
+		doc = frappe.get_doc({"doctype": doctype, **values})
+		doc.name = f"summary-{frappe.generate_hash(length=8)}"
+		# Only the row matters here, not the billing or machine that would create it.
+		doc.db_insert()
 
 	def invoice(self, team: str, amount_paid: float = 10, invoice_type: str = "Billable") -> None:
 		invoice = frappe.get_doc(

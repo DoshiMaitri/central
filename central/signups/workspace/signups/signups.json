@@ -45,7 +45,7 @@
    "hidden": 0,
    "is_query_report": 0,
    "label": "Affiliates",
-   "link_count": 3,
+   "link_count": 4,
    "onboard": 0,
    "type": "Card Break"
   },
@@ -55,6 +55,16 @@
    "label": "Affiliate",
    "link_count": 0,
    "link_to": "Affiliate",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Affiliate Link",
+   "link_count": 0,
+   "link_to": "Affiliate Link",
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
@@ -80,7 +90,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-10-14 12:00:00.000000",
+ "modified": "2026-10-15 21:59:59.713609",
  "modified_by": "Administrator",
  "module": "Signups",
  "name": "Signups",

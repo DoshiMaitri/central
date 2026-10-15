@@ -93,6 +93,10 @@
  ],
  "links": [
   {
+   "link_doctype": "Affiliate Link",
+   "link_fieldname": "affiliate"
+  },
+  {
    "link_doctype": "Affiliate Visit",
    "link_fieldname": "affiliate"
   },
@@ -101,7 +105,7 @@
    "link_fieldname": "affiliate"
   }
  ],
- "modified": "2026-10-14 15:20:17.982549",
+ "modified": "2026-10-15 21:46:25.025587",
  "modified_by": "Administrator",
  "module": "Signups",
  "name": "Affiliate",

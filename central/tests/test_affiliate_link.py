@@ -9,8 +9,8 @@ from frappe.utils import set_request
 from frappe.website.path_resolver import PathResolver
 
 from central.api.affiliates import get_link_products
-from central.signups.affiliate_cookie import COOKIE_NAME
-from central.signups.affiliate_link import AffiliateLinkPage
+from central.signups.affiliates.cookie import COOKIE_NAME
+from central.signups.affiliates.link import AffiliateLinkPage
 from central.signups.doctype.affiliate.test_affiliate import make_affiliate
 from central.tests.test_iam import ensure_user
 
@@ -150,7 +150,7 @@ class IntegrationTestAffiliateLink(IntegrationTestCase):
 
 	def test_clicks_over_the_rate_limit_do_not_count(self):
 		ip = f"198.51.100.{frappe.generate_hash(length=8)}"
-		with patch("central.signups.affiliate_link.CLICKS_PER_HOUR", 1):
+		with patch("central.signups.affiliates.link.CLICKS_PER_HOUR", 1):
 			self.click(ip=ip, code="zzzz9999")
 			self.click(ip=ip, query={"utm_source": "a"})
 			response = self.click(ip=ip, query={"utm_source": "b"})
