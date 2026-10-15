@@ -33,6 +33,36 @@ A referral holds the referred team, the product, the affiliate, the visit, and t
 
 The name is the unique key. The database refuses a second referral for the same team and product, so the first referral is final. A team can have one referral for each product and one for `fc`.
 
+## Operation
+
+### Apply
+
+A signed-in user calls `POST central.api.affiliates.apply`. It needs no form fields. It is safe to repeat.
+
+| Current status | Result |
+|---|---|
+| No Affiliate | Central creates one as Pending. |
+| Pending or Active | Nothing changes. |
+| Rejected | The same Affiliate becomes Pending again with a new Requested On. Central clears the review fields. |
+| Disabled | Refused. Only a System Manager can enable the affiliate again. |
+
+`GET central.api.affiliates.get_affiliate` returns the caller's own `status`, the `affiliate_code` when Active, and the `rejection_reason` when Rejected. It returns nothing when the caller never applied. Both calls return only the caller's own record.
+
+### Review
+
+A System Manager acts on an Affiliate in Desk. Each button shows only in the status that allows it.
+
+| Action | From | To | Effect |
+|---|---|---|---|
+| **Approve** | Pending | Active | Sets the code at the first approval, and Reviewed By and Reviewed On. |
+| **Reject** | Pending | Rejected | Stores the reason, and Reviewed By and Reviewed On. The reason is required. The applicant sees it. |
+| **Disable** | Active | Disabled | Pauses the affiliate. Use it to stop an active affiliate. |
+| **Enable** | Disabled | Active | Keeps the same code. |
+
+Every action locks the row. When an operator approves or rejects a request that another operator already decided, nothing changes and Central says who decided first, for example "Already approved by admin@example.com". Any other action from the wrong status is refused.
+
+The code has 8 characters from lowercase letters and digits, without the look-alikes `0`, `o`, `1`, `l` and `i`. Central draws again when a code is taken. If two approvals draw the same new code at the same time, the second one fails and the operator approves again.
+
 ## Configuration
 
 | Central Settings field | Default | Meaning |
