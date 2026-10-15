@@ -10,6 +10,7 @@ from central.api.affiliates import apply, get_affiliate
 from central.signups.doctype.affiliate.affiliate import (
 	CODE_ALPHABET,
 	CODE_LENGTH,
+	Affiliate,
 	AffiliateStatusError,
 	generate_affiliate_code,
 )
@@ -85,6 +86,13 @@ class IntegrationTestAffiliateReview(IntegrationTestCase):
 		self.assertEqual(apply()["status"], "Pending")
 		self.assertEqual(apply()["status"], "Pending")
 		self.assertEqual(frappe.db.count("Affiliate", {"user": self.applicant}), 1)
+
+	def test_a_lost_race_returns_the_request_without_an_error_message(self):
+		first = self.request()
+		frappe.clear_messages()
+
+		self.assertEqual(Affiliate.create_request(self.applicant).name, first.name)
+		self.assertEqual(frappe.message_log, [])
 
 	def test_apply_changes_nothing_for_an_active_affiliate(self):
 		affiliate = self.approved()

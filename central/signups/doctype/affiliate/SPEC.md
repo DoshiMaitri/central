@@ -63,11 +63,25 @@ Every action locks the row. When an operator approves or rejects a request that 
 
 The code has 8 characters from lowercase letters and digits, without the look-alikes `0`, `o`, `1`, `l` and `i`. Central draws again when a code is taken. If two approvals draw the same new code at the same time, the second one fails and the operator approves again.
 
+### Affiliate link
+
+An Active affiliate shares `/r/<code>`, for example `/r/k7m2x9pa?product=raven&utm_source=youtube`. The code matches in any case. Central sends the visitor to `/dashboard/signup` with the `product`, `utm_source`, `utm_medium` and `utm_campaign` of the link. It ignores every other parameter, so the link cannot send a visitor to another site. The product key matches in any case. An unknown or disabled product is dropped, and the click counts for Frappe Cloud. The link answers GET and HEAD only, and the answer is never cached.
+
+A click records an Affiliate Visit and sets the `central_affiliate` cookie. The cookie holds one visit for each product key, such as `{"raven": "m3x8k2qa", "fc": "t7w2p5nc"}`. A new click for a product replaces that product's visit and leaves the others. A click with the same affiliate, product and UTM values as the browser's visit for that product updates Last Clicked On instead of adding a visit. The cookie is HttpOnly, SameSite Lax, Secure on HTTPS, and lasts Affiliate Cookie Days. Central ignores a cookie that it cannot read or that names a deleted visit.
+
+The visitor always reaches signup. Central records nothing when:
+
+- the code is unknown or the affiliate is not Active
+- the request is HEAD, has no user agent, or comes from a crawler or link preview
+- the signed-in user is the affiliate
+- the IP address made more than 60 counted clicks in the last hour
+- Affiliate Cookie Days is 0
+
 ## Configuration
 
 | Central Settings field | Default | Meaning |
 |---|---|---|
-| Affiliate Cookie Days | 30 | Days a click on an affiliate link is remembered. A signup after this gets no referral. |
+| Affiliate Cookie Days | 30 | Days a click on an affiliate link is remembered. A signup after this gets no referral. 0 stops recording clicks. |
 
 ## Known behavior
 

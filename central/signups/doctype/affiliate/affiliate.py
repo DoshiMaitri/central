@@ -64,7 +64,9 @@ class Affiliate(Document):
 			# An applicant holds no Affiliate permission and creates only their own request.
 			return affiliate.insert(ignore_permissions=True)
 		except frappe.UniqueValidationError:
-			# A second request from the same user won the race. A locking read sees its committed row.
+			# A second request from the same user won the race. Drop Frappe's "must be unique" message,
+			# and read the row with a lock, which sees the other request's committed row.
+			frappe.clear_last_message()
 			name = frappe.db.get_value("Affiliate", {"user": user}, "name", for_update=True)
 			return frappe.get_doc("Affiliate", name)
 
