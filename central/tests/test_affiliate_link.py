@@ -8,7 +8,8 @@ from frappe.tests import IntegrationTestCase
 from frappe.utils import set_request
 from frappe.website.path_resolver import PathResolver
 
-from central.signups.affiliate_link import COOKIE_NAME, AffiliateLinkPage
+from central.signups.affiliate_cookie import COOKIE_NAME
+from central.signups.affiliate_link import AffiliateLinkPage
 from central.signups.doctype.affiliate.test_affiliate import make_affiliate
 from central.tests.test_iam import ensure_user
 
@@ -27,18 +28,26 @@ class IntegrationTestAffiliateLink(IntegrationTestCase):
 		self.affiliate.approve()
 		self.code = self.affiliate.affiliate_code
 		self.customer = ensure_user("link.customer@example.test")
-		frappe.get_doc({"doctype": "Product", "product_key": "link-raven", "title": "Raven", "signup_app": "raven"}).insert()
+		frappe.get_doc(
+			{"doctype": "Product", "product_key": "link-raven", "title": "Raven", "signup_app": "raven"}
+		).insert()
 		frappe.set_user("Guest")
 
 	def test_a_click_records_a_visit_and_forwards_the_query(self):
-		response = self.click(query={"product": "link-raven", "utm_source": "youtube", "to": "https://evil.test"})
+		response = self.click(
+			query={"product": "link-raven", "utm_source": "youtube", "to": "https://evil.test"}
+		)
 
 		self.assertEqual(response.status_code, 302)
-		self.assertEqual(response.headers["Location"], "/dashboard/signup?product=link-raven&utm_source=youtube")
+		self.assertEqual(
+			response.headers["Location"], "/dashboard/signup?product=link-raven&utm_source=youtube"
+		)
 		self.assertEqual(response.headers["Cache-Control"], "no-store")
 
 		visit = frappe.get_doc("Affiliate Visit", self.cookie()["link-raven"])
-		self.assertEqual((visit.affiliate, visit.product, visit.utm_source), (self.affiliate.name, "link-raven", "youtube"))
+		self.assertEqual(
+			(visit.affiliate, visit.product, visit.utm_source), (self.affiliate.name, "link-raven", "youtube")
+		)
 		self.assertIsNone(visit.utm_medium)
 
 		cookie = frappe.local.cookie_manager.cookies[COOKIE_NAME]

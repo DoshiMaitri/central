@@ -126,4 +126,4 @@ A team created at signup keeps how its owner first found Frappe Cloud. The brows
 | Landing Product | The first page's `product`, when that product exists |
 | Referrer | The page that linked to the first page, trimmed to 1,000 characters |
 
-A bad or unknown value is dropped and the team is still created. Join these fields with invoices to measure revenue by campaign. Pulse holds the funnel counts.
+A bad or unknown value is dropped and the team is still created. Join these fields with invoices to measure revenue by campaign. Pulse holds the funnel counts. The browser also sends `signup_product`, the product of the current signup, which decides the [affiliate referral](../affiliate/SPEC.md#referral). It does not change these fields.

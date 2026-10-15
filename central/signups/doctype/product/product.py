@@ -192,6 +192,13 @@ def get_email_product(product_key: str | None) -> Product | None:
 	return frappe.get_cached_doc("Product", product_key)
 
 
+def get_enabled_product_key(product_key: str | None) -> str | None:
+	"""The stored key of an enabled product, or None. The database matches a key in any case."""
+	return (
+		frappe.db.get_value("Product", {"name": product_key, "enabled": 1}, "name") if product_key else None
+	)
+
+
 def get_signup_product(product_key: str) -> Product:
 	"""The enabled product a signup names, or a refusal the customer can read."""
 	if not frappe.db.exists("Product", {"name": product_key, "enabled": 1}):

@@ -77,6 +77,25 @@ The visitor always reaches signup. Central records nothing when:
 - the IP address made more than 60 counted clicks in the last hour
 - Affiliate Cookie Days is 0
 
+### Referral
+
+Central credits a signup in two places. Both read the visit for one product key in the cookie, and do not use the entry of another product.
+
+| When | Product key |
+|---|---|
+| The signup flow creates a new user's first Team (`central.api.sites.create_trial_team`) | The product of the current signup, from `signup_product`. An unknown or disabled product, or none, uses `fc`. A user who already has a Team gets no new Team and no referral. |
+| A Team starts a product trial site (`central.api.sites.create_trial_site` with a product) | That product. Only when the Team has no earlier Site of that product, terminated sites included, and no earlier request for one. A trial without a product records nothing here. |
+
+Central creates the Product Referral only when all of these are true:
+
+- the cookie has a visit for the product key, and the visit exists and is for that product
+- the visit's affiliate is Active now
+- the last click is not older than Affiliate Cookie Days, checked on the server
+- the affiliate is not a member of the Team
+- the Team has no referral for that product yet
+
+The referral copies the affiliate, the visit and the UTM values of the visit. Central then removes that product's entry from the cookie and keeps the others. The first referral for a Team and product is final. A later click on another affiliate's link records a visit and changes nothing else. A referral error is written to the Error Log, and the signup continues.
+
 ## Configuration
 
 | Central Settings field | Default | Meaning |
