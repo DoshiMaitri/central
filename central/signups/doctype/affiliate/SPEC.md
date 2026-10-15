@@ -96,6 +96,22 @@ Central creates the Product Referral only when all of these are true:
 
 The referral copies the affiliate, the visit and the UTM values of the visit. Central then removes that product's entry from the cookie and keeps the others. The first referral for a Team and product is final. A later click on another affiliate's link records a visit and changes nothing else. A referral error is written to the Error Log, and the signup continues.
 
+### Summary
+
+An Active affiliate calls `GET central.api.affiliates.get_summary(from_date, to_date)`. Both dates are included. Central counts from existing records and stores no totals.
+
+| Number | Counts |
+|---|---|
+| Visited | Affiliate Visits created in the dates. A person who clicks links with different sources counts once for each. |
+| Signed up | Product Referrals created in the dates. |
+| Converted | Of those referrals, the ones whose Team has a Paid, Billable Invoice with Amount Paid above 0. |
+
+A Frappe Cloud (`fc`) referral converts only when its Team has no product referral from any affiliate. Otherwise the payment belongs to the product referral. When a Team has two product referrals, both convert when the Team pays. An invoice paid only with credit does not convert. A refunded invoice still converts.
+
+Billing is in arrears, so a Team pays its first invoice some weeks after it signs up. A recent signup shows as not converted even when the customer will pay.
+
+The answer holds `totals`, `by_source` (by `utm_source`), `by_product` and up to 20 `recent_signups`, newest first. Each recent signup has the date, product, source and status (Signed up or Converted). An empty source or product reads `(none)`. The answer never names a Team. Any other user, or an affiliate that is not Active, is refused.
+
 ## Configuration
 
 | Central Settings field | Default | Meaning |
