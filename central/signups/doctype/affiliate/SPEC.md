@@ -48,6 +48,20 @@ A signed-in user calls `POST central.api.affiliates.apply`. It needs no form fie
 
 `GET central.api.affiliates.get_affiliate` returns the caller's own `status`, the `affiliate_code` when Active, and the `rejection_reason` when Rejected. It returns nothing when the caller never applied. Both calls return only the caller's own record.
 
+### Console
+
+Every signed-in user sees **Affiliate** in the console sidebar, at `/dashboard/affiliate`. The page shows one state:
+
+| Status | Page |
+|---|---|
+| Never applied | **Become an affiliate**, which calls `apply`. |
+| Pending | The request is under review. |
+| Rejected | The reason, and **Request again**. |
+| Disabled | The account is paused. There is no button. |
+| Active | The link `/r/<code>` with a copy button, a link builder, the period, the funnel, tables by source and by product, and recent signups. |
+
+The link builder adds `product` (from `get_link_products`, the enabled products) and `utm_source` (`youtube`, `instagram`, `linkedin` or `other`). The period is the last 7, 30 or 90 days, or this year. The default is 30 days.
+
 ### Review
 
 A System Manager acts on an Affiliate in Desk. Each button shows only in the status that allows it.

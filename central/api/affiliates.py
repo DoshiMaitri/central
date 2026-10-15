@@ -26,3 +26,9 @@ def get_summary(from_date: str, to_date: str) -> dict:
 		frappe.throw(_("Only an active affiliate has a summary."), frappe.PermissionError)
 
 	return get_affiliate_summary(affiliate, from_date, to_date)
+
+
+@frappe.whitelist(methods=["GET"])
+def get_link_products() -> list[dict]:
+	"""The enabled products an affiliate link can name, for the link builder."""
+	return frappe.get_all("Product", filters={"enabled": 1}, fields=["name", "title"], order_by="title asc")

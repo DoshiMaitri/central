@@ -8,6 +8,7 @@ from frappe.tests import IntegrationTestCase
 from frappe.utils import set_request
 from frappe.website.path_resolver import PathResolver
 
+from central.api.affiliates import get_link_products
 from central.signups.affiliate_cookie import COOKIE_NAME
 from central.signups.affiliate_link import AffiliateLinkPage
 from central.signups.doctype.affiliate.test_affiliate import make_affiliate
@@ -156,6 +157,13 @@ class IntegrationTestAffiliateLink(IntegrationTestCase):
 
 		self.assertEqual(response.status_code, 302)
 		self.assertEqual(frappe.db.count("Affiliate Visit", {"affiliate": self.affiliate.name}), 1)
+
+	def test_the_link_builder_lists_enabled_products_only(self):
+		frappe.set_user(self.customer)
+		self.assertIn("link-raven", [row.name for row in get_link_products()])
+
+		frappe.db.set_value("Product", "link-raven", "enabled", 0)
+		self.assertNotIn("link-raven", [row.name for row in get_link_products()])
 
 	def test_only_get_and_head_are_served(self):
 		self.assertEqual(self.click(method="POST").status_code, 405)
