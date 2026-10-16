@@ -1,10 +1,16 @@
 <script setup lang="ts">
-import { Button, Select, Tooltip } from 'frappe-ui'
+import { Button, Select } from 'frappe-ui'
 import { computed, ref } from 'vue'
 import AffiliateCountriesDialog from '@/components/affiliate/AffiliateCountriesDialog.vue'
-import AffiliateCountryMap from '@/components/affiliate/AffiliateCountryMap.vue'
+import ServerMap from '@/components/servers/ServerMap.vue'
 import { countryPlace } from '@/lib/countries'
-import { flagEmoji } from '@/lib/serverMap'
+import { COUNTRY_DOTS } from '@/lib/countryDots'
+import {
+	flagEmoji,
+	MAP_HEIGHT,
+	MAP_WIDTH,
+	type MapHighlight,
+} from '@/lib/serverMap'
 import type { FunnelRow } from '@/types/affiliates'
 
 interface AffiliateCountriesCardProps {
@@ -13,9 +19,14 @@ interface AffiliateCountriesCardProps {
 
 const props = defineProps<AffiliateCountriesCardProps>()
 
-const HELP =
-	'Where the people who clicked your links are, and how many signed up.'
-const TOP = 5
+const TOP = 10
+// Lightest to darkest, so a stronger country reads darker.
+const SHADES = [
+	'var(--surface-blue-3)',
+	'var(--surface-blue-5)',
+	'var(--surface-blue-7)',
+	'var(--surface-blue-9)',
+]
 
 const chosen = ref('')
 const dialogOpen = ref(false)
@@ -33,14 +44,41 @@ const options = computed(() => [
 	{ label: 'All countries', value: '' },
 	...ranked.value.map(({ label }) => ({ label, value: label })),
 ])
-const mapRows = computed(() =>
-	chosen.value
-		? props.rows.filter((row) => row.label === chosen.value)
-		: props.rows,
-)
-
 const rate = (row: FunnelRow): string =>
 	row.signed_up ? `${Math.round((row.converted / row.signed_up) * 100)}%` : '–'
+
+const conversion = (row: FunnelRow): number =>
+	row.signed_up ? row.converted / row.signed_up : 0
+
+// Each known country's dots, shaded by its signups and conversion together.
+const highlights = computed<MapHighlight[]>(() => {
+	const rows = chosen.value
+		? props.rows.filter((row) => row.label === chosen.value)
+		: props.rows
+	const mostSignups = Math.max(...rows.map((row) => row.signed_up), 1)
+	const bestConversion = Math.max(...rows.map(conversion), Number.EPSILON)
+
+	return rows.flatMap((row) => {
+		const place = countryPlace(row.label)
+		const path = place && COUNTRY_DOTS[place.code]
+		if (!place || !path) return []
+
+		const score =
+			(row.signed_up / mostSignups + conversion(row) / bestConversion) / 2
+		const shade = Math.min(SHADES.length - 1, Math.floor(score * SHADES.length))
+		return [
+			{
+				id: row.label,
+				path,
+				color: SHADES[shade],
+				lat: place.lat,
+				lng: place.lng,
+				label: `${flagEmoji(place.code)} ${row.label}`,
+				detail: `${row.visited} clicks · ${row.signed_up} signups · ${rate(row)} conversion`,
+			},
+		]
+	})
+})
 </script>
 
 <template>
@@ -49,16 +87,8 @@ const rate = (row: FunnelRow): string =>
 	>
 		<div class="flex min-w-0 flex-col gap-4 p-5">
 			<div class="flex flex-wrap items-center justify-between gap-3">
-				<h2
-					class="flex items-center gap-1.5 text-base-semibold text-ink-gray-8"
-				>
+				<h2 class="text-base-semibold text-ink-gray-8">
 					Where your customers come from
-					<Tooltip :text="HELP">
-						<span
-							class="lucide-info size-3.5 text-ink-gray-4"
-							:aria-label="HELP"
-						/>
-					</Tooltip>
 				</h2>
 				<Select
 					v-model="chosen"
@@ -71,15 +101,20 @@ const rate = (row: FunnelRow): string =>
 				No visits in this period.
 			</p>
 			<template v-else>
-				<AffiliateCountryMap :rows="mapRows" />
+				<div
+					class="w-full"
+					:style="{ aspectRatio: `${MAP_WIDTH} / ${MAP_HEIGHT}` }"
+				>
+					<ServerMap :interactive="false" :highlights="highlights" />
+				</div>
 				<div class="flex items-center gap-5 text-sm text-ink-gray-6">
 					<span class="flex items-center gap-2">
-						<span class="size-3.5 rounded-full bg-surface-blue-5" />
-						More signups
+						<span class="size-3 rounded-full bg-surface-blue-9" />
+						More signups and conversion
 					</span>
 					<span class="flex items-center gap-2">
-						<span class="size-2 rounded-full bg-surface-blue-5" />
-						Fewer signups
+						<span class="size-3 rounded-full bg-surface-blue-3" />
+						Fewer
 					</span>
 				</div>
 			</template>
