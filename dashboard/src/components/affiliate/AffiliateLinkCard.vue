@@ -1,10 +1,9 @@
 <script setup lang="ts">
 import { Alert, Button, Select, TextInput } from 'frappe-ui'
 import { computed, ref, watch } from 'vue'
-import CopyableValue from '@/components/common/CopyableValue.vue'
-import CopyButton from '@/components/common/CopyButton.vue'
 import { AFFILIATE_SOURCES, affiliateUrl } from '@/composables/useAffiliate'
-import { getErrorMessage, successToast } from '@/lib/feedback'
+import { copyToClipboard } from '@/lib/clipboard'
+import { getErrorMessage, reportError, successToast } from '@/lib/feedback'
 import type { LinkProduct, NewAffiliateLink } from '@/types/affiliates'
 
 interface AffiliateLinkCardProps {
@@ -22,10 +21,10 @@ const slug = ref('')
 const product = ref(FRAPPE_CLOUD)
 const source = ref(AFFILIATE_SOURCES[0].value)
 const campaign = ref('')
-const creating = ref(false)
+const copying = ref(false)
 const createError = ref('')
-// The slug saved last, so its link can be copied once it exists.
-const savedSlug = ref('')
+// A saved slug fixes its choices, so a later change needs a new slug.
+const savedLink = ref('')
 
 const productOptions = computed(() => [
 	{ label: 'Frappe Cloud', value: FRAPPE_CLOUD },
@@ -33,42 +32,51 @@ const productOptions = computed(() => [
 ])
 const cleanSlug = computed(() => slug.value.trim().toLowerCase())
 const cleanCampaign = computed(() => campaign.value.trim())
-const link = computed(() => affiliateUrl(props.code))
 
-// Without a slug the main link carries the choices in its query. A slug is a saved
-// link that keeps them itself, so its address is just /r/<slug>.
-const builtLink = computed(() => {
-	if (cleanSlug.value) return affiliateUrl(cleanSlug.value)
+// A slug replaces only the code. The query carries the product, source and campaign.
+const link = computed(() => {
+	const base = affiliateUrl(cleanSlug.value || props.code)
+	if (!cleanCampaign.value && product.value === FRAPPE_CLOUD) return base
 
 	const query = new URLSearchParams()
 	if (product.value !== FRAPPE_CLOUD) query.set('product', product.value)
 	query.set('utm_source', source.value)
-	query.set('utm_campaign', cleanCampaign.value)
-	return `${link.value}?${query}`
+	if (cleanCampaign.value) query.set('utm_campaign', cleanCampaign.value)
+	return `${base}?${query}`
 })
 const isSaved = computed(
-	() => !cleanSlug.value || cleanSlug.value === savedSlug.value,
+	() => !cleanSlug.value || link.value === savedLink.value,
 )
 
-watch([slug, product, source, campaign], () => {
+watch(link, () => {
 	createError.value = ''
-	if (cleanSlug.value !== savedSlug.value) savedSlug.value = ''
 })
 
-async function create(): Promise<void> {
-	creating.value = true
+/** Save a new slug first, so the copied link credits the affiliate. */
+async function copyLink(): Promise<void> {
+	copying.value = true
 	try {
-		savedSlug.value = await props.create({
-			slug: cleanSlug.value,
-			product: product.value === FRAPPE_CLOUD ? '' : product.value,
-			utm_source: source.value,
-			utm_campaign: cleanCampaign.value,
-		})
-		successToast(`Link ${affiliateUrl(savedSlug.value)} created`)
+		if (!isSaved.value) {
+			await props.create(getNewLink())
+			savedLink.value = link.value
+		}
 	} catch (error) {
-		createError.value = getErrorMessage(error, "The link couldn't be created.")
+		createError.value = getErrorMessage(error, "The link couldn't be saved.")
+		return
 	} finally {
-		creating.value = false
+		copying.value = false
+	}
+
+	if (await copyToClipboard(link.value)) successToast('Affiliate link copied')
+	else reportError('Could not copy the link. Select it and copy it manually.')
+}
+
+function getNewLink(): NewAffiliateLink {
+	return {
+		slug: cleanSlug.value,
+		product: product.value === FRAPPE_CLOUD ? '' : product.value,
+		utm_source: source.value,
+		utm_campaign: cleanCampaign.value,
 	}
 }
 </script>
@@ -86,8 +94,18 @@ async function create(): Promise<void> {
 				Your link
 			</h2>
 			<div class="flex items-center gap-2">
-				<CopyableValue :value="link" label="Affiliate link" block />
-				<CopyButton :text="link" />
+				<p
+					class="min-w-0 flex-1 break-all rounded-4 bg-surface-gray-2 px-3 py-2 font-mono text-p-sm text-ink-gray-7"
+				>
+					{{ link }}
+				</p>
+				<Button
+					variant="ghost"
+					icon="lucide-copy"
+					label="Copy link"
+					:loading="copying"
+					@click="copyLink"
+				/>
 			</div>
 		</div>
 
@@ -109,24 +127,6 @@ async function create(): Promise<void> {
 				maxlength="32"
 			/>
 			<Alert v-if="createError" theme="red" :title="createError" />
-
-			<div v-if="cleanCampaign && isSaved" class="flex items-center gap-2">
-				<CopyableValue :value="builtLink" label="Affiliate link" block />
-				<CopyButton :text="builtLink" />
-			</div>
-			<template v-else-if="cleanCampaign">
-				<p
-					class="break-all rounded-4 bg-surface-gray-2 px-3 py-2 font-mono text-p-sm text-ink-gray-6"
-				>
-					{{ builtLink }}
-				</p>
-				<Button
-					variant="solid"
-					label="Create link"
-					:loading="creating"
-					@click="create"
-				/>
-			</template>
 		</div>
 	</section>
 </template>
