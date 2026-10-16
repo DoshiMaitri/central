@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { TabButtons } from 'frappe-ui'
+import { BarChart } from 'frappe-ui/charts'
 import { computed, ref } from 'vue'
-import Table from '@/components/common/Table.vue'
+import { FUNNEL_SERIES } from '@/composables/useAffiliate'
 import type { FunnelRow } from '@/types/affiliates'
 
 interface BreakdownView {
-	/** The switch label, such as "Country". It also heads the first column. */
+	/** The switch label, such as "Source". */
 	label: string
 	rows: FunnelRow[]
 }
@@ -21,14 +22,12 @@ const view = computed(
 	() =>
 		props.views.find((item) => item.label === chosen.value) ?? props.views[0],
 )
-const columns = computed(() => [
-	{ key: 'label', label: view.value?.label ?? '' },
-	{ key: 'visited', label: 'Clicks' },
-	{ key: 'signed_up', label: 'Signups' },
-	{ key: 'converted', label: 'Paying' },
-])
 const options = computed(() =>
 	props.views.map(({ label }) => ({ label, value: label })),
+)
+// The most clicked first, so the chart reads left to right.
+const chartRows = computed(() =>
+	[...(view.value?.rows ?? [])].sort((a, b) => b.visited - a.visited),
 )
 </script>
 
@@ -43,6 +42,13 @@ const options = computed(() =>
 		<p v-if="!view?.rows.length" class="text-p-sm text-ink-gray-5">
 			No visits or signups in this period.
 		</p>
-		<Table v-else :columns="columns" :rows="view.rows" />
+		<div v-else class="h-72">
+			<BarChart
+				:data="chartRows"
+				x="label"
+				:y="['visited', 'signed_up', 'converted']"
+				:series-config="FUNNEL_SERIES"
+			/>
+		</div>
 	</section>
 </template>

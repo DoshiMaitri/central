@@ -49,6 +49,13 @@ export const AFFILIATE_SOURCES = [
 	{ label: 'Other', value: 'other' },
 ]
 
+/** The funnel counts a bar chart plots, in light tints of the performance chart's colors. */
+export const FUNNEL_SERIES = {
+	visited: { label: 'Clicks', color: 'var(--surface-blue-4)' },
+	signed_up: { label: 'Signups', color: 'var(--surface-purple-4)' },
+	converted: { label: 'Paying', color: 'var(--surface-green-4)' },
+}
+
 // Commission is not decided yet. This sample rate only draws the earnings card.
 const SAMPLE_EARNING_PER_CUSTOMER = 50
 

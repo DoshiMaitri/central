@@ -92,17 +92,17 @@ const {
 					:primary-action="{ label: 'Retry', onClick: () => summary.reload() }"
 				/>
 				<AffiliateKpiCards v-else-if="summary.data" :summary="summary.data" />
-				<div class="grid gap-4 md:gap-5 lg:grid-cols-[minmax(0,1fr)_24rem]">
-					<AffiliatePerformanceChart
-						v-if="summary.data"
-						:daily="summary.data.daily"
-					/>
-					<LoadingText v-else-if="!summary.error" :lines="6" />
+				<div class="grid gap-4 md:gap-5 lg:grid-cols-[24rem_minmax(0,1fr)]">
 					<AffiliateLinkCard
 						:code="account.data.affiliate_code ?? ''"
 						:products="products"
 						:create="createLink"
 					/>
+					<AffiliatePerformanceChart
+						v-if="summary.data"
+						:daily="summary.data.daily"
+					/>
+					<LoadingText v-else-if="!summary.error" :lines="6" />
 				</div>
 				<template v-if="summary.data">
 					<AffiliateFunnelCard :totals="totals" />
@@ -112,13 +112,15 @@ const {
 						:products="products"
 					/>
 					<AffiliateCountriesCard :rows="byCountry" />
-					<AffiliateLinksCard :links="linkRows" />
-					<AffiliateBreakdownCard
-						:views="[
-							{ label: 'Source', rows: bySource },
-							{ label: 'Product', rows: byProduct },
-						]"
-					/>
+					<div class="grid gap-4 md:gap-5 lg:grid-cols-2">
+						<AffiliateLinksCard :links="linkRows" />
+						<AffiliateBreakdownCard
+							:views="[
+								{ label: 'Source', rows: bySource },
+								{ label: 'Product', rows: byProduct },
+							]"
+						/>
+					</div>
 
 					<LoadingText v-if="!retention.data && !retention.error" :lines="4" />
 					<Alert

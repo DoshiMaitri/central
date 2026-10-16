@@ -1,22 +1,23 @@
 <script setup lang="ts">
-import { Badge } from 'frappe-ui'
-import Table from '@/components/common/Table.vue'
-import type { LinkRow } from '@/composables/useAffiliate'
+import { BarChart } from 'frappe-ui/charts'
+import { computed } from 'vue'
+import { FUNNEL_SERIES, type LinkRow } from '@/composables/useAffiliate'
 
 interface AffiliateLinksCardProps {
 	links: LinkRow[]
 }
 
-defineProps<AffiliateLinksCardProps>()
+const props = defineProps<AffiliateLinksCardProps>()
 
-const columns = [
-	{ key: 'slug', label: 'Campaign' },
-	{ key: 'product', label: 'Product' },
-	{ key: 'utm_source', label: 'Source' },
-	{ key: 'visited', label: 'Clicks' },
-	{ key: 'signed_up', label: 'Signups' },
-	{ key: 'converted', label: 'Paying' },
-]
+const TOP = 8
+
+// Campaigns with the most signups first; clicks break a tie.
+const topCampaigns = computed(() =>
+	props.links
+		.filter((link) => link.visited || link.signed_up)
+		.sort((a, b) => b.signed_up - a.signed_up || b.visited - a.visited)
+		.slice(0, TOP),
+)
 </script>
 
 <template>
@@ -24,17 +25,16 @@ const columns = [
 		class="flex min-w-0 flex-col gap-3 rounded-6 border border-outline-gray-1 bg-surface-base p-5"
 	>
 		<h2 class="text-base-semibold text-ink-gray-8">Campaigns</h2>
-		<Table :columns="columns" :rows="links">
-			<template #slug="{ row }">
-				<span class="flex items-center gap-2 text-base text-ink-gray-9">
-					{{ row.slug }}
-					<Badge v-if="row.isMain" theme="gray" label="Main" />
-				</span>
-			</template>
-			<template #product="{ row }"
-				>{{ row.product ?? 'Frappe Cloud' }}</template
-			>
-			<template #utm_source="{ row }">{{ row.utm_source ?? '–' }}</template>
-		</Table>
+		<p v-if="!topCampaigns.length" class="text-p-sm text-ink-gray-5">
+			No visits or signups in this period.
+		</p>
+		<div v-else class="h-72">
+			<BarChart
+				:data="topCampaigns"
+				x="slug"
+				:y="['visited', 'signed_up', 'converted']"
+				:series-config="FUNNEL_SERIES"
+			/>
+		</div>
 	</section>
 </template>
