@@ -59,13 +59,15 @@ Every signed-in user sees **Affiliate** in the console sidebar, at `/dashboard/a
 | Pending | The request is under review. |
 | Rejected | The reason, and **Request again**. |
 | Disabled | The account is paused. There is no button. |
-| Active | One page, top to bottom: five numbers (clicks, signups, paying customers, click to paid, and earnings per click), Performance Overview (clicks, signups and paying customers per day) with the main link and the link builder beside it, the conversion funnel, earnings by product and by campaign, Where your customers come from, the campaigns table, the Breakdown card, and Retention. |
+| Active | One page, top to bottom: five numbers (clicks, signups, paying customers, click to paid, and earnings per click), the link builder with Performance Overview (clicks, signups and paying customers per day) beside it, the conversion funnel, earnings by product and by campaign, Where your customers come from, the Campaigns and Breakdown charts side by side, and Retention. |
 
-The campaigns table shows the main link `/r/<code>` and every named link, with its name, product, source, clicks, signups and paying customers. Earnings by product is a table of each product's clicks, signups, paying customers, conversion rate (paying customers out of signups), earnings and earnings per click. Earnings by campaign is a ring chart of each campaign's share of the earnings, with the total in the middle. Both use the sample rate of 50 USD for each paying customer until commission is decided. Where your customers come from shows a world map with a dot for each country, sized by its signups, and the top 5 countries by signups with their conversion rate (paying customers out of signups). A country picker shows one country on the map. **View all countries** opens a scrollable list of every country with clicks, signups, paying customers and conversion rate. A country without a known position is listed but not drawn. The Breakdown card switches between Source and Product, each with clicks, signups and paying customers. An unknown country reads Unknown. Retention is the last section. It covers all time, not the period. See [Retention](#retention).
+The Campaigns chart shows clicks, signups and paying customers for the top 8 links by signups, the main link `/r/<code>` included. The Breakdown chart shows the same numbers for each source or product, with a switch between Source and Product. Earnings by product is a table of each product's clicks, signups, paying customers, conversion rate (paying customers out of signups), earnings and earnings per click. Earnings by campaign is a ring chart of each campaign's share of the earnings, with the total in the middle. Both use the sample rate of 50 USD for each paying customer until commission is decided.
 
-Each number has a short explanation on hover. Clicks, signups, paying customers and earnings per click show the change against the period of the same length just before, as a percent. Clicks, signups and paying customers show a small daily trend. Click to paid shows how many clicks it counts.
+Where your customers come from colours the dots of each country on the server map, in four shades of blue. A darker shade means more signups and a higher conversion rate (paying customers out of signups) than the other countries. Hover shows the country's clicks, signups and conversion rate. Beside the map are the top 10 countries by signups. A country picker shows one country and zooms to it. **View all countries** opens a scrollable list of every country with clicks, signups, paying customers and conversion rate. An unknown country reads Unknown, and is listed but not drawn. The country dots come from `dashboard/src/lib/countryDots.ts`, which `dashboard/scripts/generate_country_dots.py` makes from the Natural Earth country borders.
 
-The link builder asks for a campaign, a product (from `get_link_products`, the enabled products), a source (`youtube`, `instagram`, `linkedin` or `other`) and an optional link slug. It shows a link only when the campaign is set. Without a link slug, it adds the choices to the main link as `product`, `utm_source` and `utm_campaign`, and the link is ready to copy. With a link slug, **Create link** saves a named link, and the builder shows `/r/<slug>` to copy. The period is a from and to date, both included, picked in the header. The picker also offers the last 7, 30 or 90 days and this year. The default is the last 30 days, and a cleared period falls back to it. A date after today cannot be picked. Commission is not decided yet, so **Earnings per click** uses a sample rate of 50 USD for each paying customer.
+Clicks, signups, paying customers and earnings per click show the change against the period of the same length just before, as a percent. Click to paid shows how many clicks it counts.
+
+The link builder asks for a campaign, a product (from `get_link_products`, the enabled products), a source (`youtube`, `instagram`, `linkedin` or `other`) and an optional link slug. **Your link** changes as the choices change. It is the main link `/r/<code>`, or `/r/<slug>` when a slug is set, with the product, the source and the campaign in the query as `product`, `utm_source` and `utm_campaign`. With no campaign and no product, it is the plain link. Copying a link with a new slug saves the named link first, and copies it only when the save succeeds. A named link fixes its choices when it is saved, so a changed choice needs a new slug. The period is a from and to date, both included, picked in the header. The picker also offers the last 7, 30 or 90 days and this year. A period has at most 366 days. The default is the last 30 days, and a cleared period falls back to it. A date after today cannot be picked. Commission is not decided yet, so **Earnings per click** uses a sample rate of 50 USD for each paying customer.
 
 ### Review
 
@@ -84,7 +86,7 @@ The code has 8 characters from lowercase letters and digits, without the look-al
 
 ### Named links
 
-An Active affiliate adds a named link with `POST central.api.affiliates.create_link(slug, product, utm_source, utm_campaign)` and lists them with `get_links`. The link is `/r/<slug>`, for example `/r/bwh`. A slug has 3 to 32 lowercase letters, numbers and hyphens, and starts and ends with a letter or number. Central saves it in lowercase. An empty slug gets a random one. A slug is unique across all affiliates, first come first served, and cannot be any affiliate's main code. An affiliate can have at most 100 links, and can add at most 30 in an hour. A link's product must be enabled, and a link must have a campaign.
+An Active affiliate adds a named link with `POST central.api.affiliates.create_link(slug, product, utm_source, utm_campaign)` and lists them with `get_links`. The link is `/r/<slug>`, for example `/r/bwh`. A slug has 3 to 32 lowercase letters, numbers and hyphens, and starts and ends with a letter or number. Central saves it in lowercase. An empty slug gets a random one. A slug is unique across all affiliates, first come first served, and cannot be any affiliate's main code. When two affiliates save the same slug at the same time, the second one is told that the slug is taken. An affiliate can have at most 100 links, and can add at most 30 in an hour. A link's product must be enabled, and a link must have a campaign.
 
 ### Affiliate link
 
@@ -121,7 +123,7 @@ The referral copies the affiliate, the visit and the UTM values of the visit. Ce
 
 ### Summary
 
-An Active affiliate calls `GET central.api.affiliates.get_summary(from_date, to_date)`. Both dates are included. Central counts from existing records and stores no totals.
+An Active affiliate calls `GET central.api.affiliates.get_summary(from_date, to_date)`. Both dates are included, and the period has at most 366 days. Central counts from existing records and stores no totals.
 
 | Number | Counts |
 |---|---|
@@ -129,7 +131,7 @@ An Active affiliate calls `GET central.api.affiliates.get_summary(from_date, to_
 | Signed up | Product Referrals created in the dates. |
 | Created a site | Of those referrals, the ones whose Team has a Site (of the referral's product, for a product referral). |
 | Added billing | Of those referrals, the ones whose Team has an Active Payment Method. |
-| Converted | Of those referrals, the ones whose Team has a Paid, Billable Invoice with Amount Paid above 0. |
+| Converted | Of those referrals, the ones whose Team paid a Billable Invoice with Amount Paid above 0 after the referral. An invoice the Team paid before the referral does not count. |
 
 A later step implies the earlier ones, so a Team that paid also counts as Added billing and Created a site.
 
@@ -141,14 +143,14 @@ The answer holds `totals`, `previous_totals` (the same numbers for the period of
 
 ### Retention
 
-`GET central.api.affiliates.get_retention` shows how long the affiliate's paying customers keep paying. It is not tied to the period. A paying customer is a referred Team that converted, as in the summary. A customer counts in a month when it paid a Billable Invoice with Amount Paid above 0 in that month.
+`GET central.api.affiliates.get_retention` shows how long the affiliate's paying customers keep paying. It is not tied to the period. A paying customer is a referred Team that converted, as in the summary. A customer counts in a month when it paid a Billable Invoice with Amount Paid above 0 in that month. Only payments after the customer's first referral by the affiliate count.
 
 | Value | Meaning |
 |---|---|
 | Customers | Paying customers of the affiliate. |
 | Active in the last 30 days, and in the last 90 days | Customers that paid an invoice in that time. The page also shows each as a percent of all paying customers. |
-| Trend | Customers that paid in each of the last 12 months, oldest first. The page draws the last 6 months beside the 30 day number, and all 12 beside the 90 day number. |
-| Curve | For month 1, 2, 3 and on, up to 12: of the customers whose first payment is at least that many full months back, the percent still paying that many months after it. A customer still pays until its last paid month. Recent customers count only for the months they have had. The page shows months 1, 3, 6 and 12 as bars, and a month no customer has reached yet as Not yet. |
+| Trend | Customers that paid in each of the last 12 months, oldest first. The page does not show it. |
+| Curve | For month 1, 2, 3 and on, up to 12: of the customers whose first payment is at least that many full months back, the percent that paid in that month after their first payment or later. Month 1 is the month after the first payment. A customer still pays until its last paid month. Recent customers count only for the months they have had. The page shows the curve as a line, with the customer counts and the percent active in 30 and 90 days above it. |
 
 ## Configuration
 

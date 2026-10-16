@@ -152,6 +152,16 @@ class IntegrationTestAffiliateSummary(IntegrationTestCase):
 		frappe.set_user(frappe.db.get_value("Affiliate", self.other, "user"))
 		self.assertEqual(get_summary(add_days(today(), -7), today())["totals"]["converted"], 1)
 
+	def test_a_payment_before_the_referral_does_not_convert(self):
+		team = self.team("Already Paying")
+		self.invoice(team, days_ago=30)
+		self.referral(team, "summary-raven", "youtube")
+
+		self.assertEqual(self.summary()["totals"]["converted"], 0)
+
+		self.invoice(team)
+		self.assertEqual(self.summary()["totals"]["converted"], 1)
+
 	def test_the_summary_names_no_team(self):
 		team = self.team("Secret Customer")
 		self.referral(team, "summary-raven", "youtube")
@@ -178,6 +188,13 @@ class IntegrationTestAffiliateSummary(IntegrationTestCase):
 
 		with self.assertRaises(frappe.ValidationError):
 			get_summary(today(), add_days(today(), -1))
+
+	def test_a_period_is_at_most_a_year(self):
+		frappe.set_user(self.affiliate.user)
+
+		get_summary(add_days(today(), -365), today())
+		with self.assertRaises(frappe.ValidationError):
+			get_summary(add_days(today(), -366), today())
 
 	def summary(self) -> dict:
 		frappe.set_user(self.affiliate.user)
@@ -245,7 +262,9 @@ class IntegrationTestAffiliateSummary(IntegrationTestCase):
 		# Only the row matters here, not the billing or machine that would create it.
 		doc.db_insert()
 
-	def invoice(self, team: str, amount_paid: float = 10, invoice_type: str = "Billable") -> None:
+	def invoice(
+		self, team: str, amount_paid: float = 10, invoice_type: str = "Billable", days_ago: int = 0
+	) -> None:
 		invoice = frappe.get_doc(
 			{
 				"doctype": "Invoice",
@@ -253,6 +272,7 @@ class IntegrationTestAffiliateSummary(IntegrationTestCase):
 				"status": "Paid",
 				"invoice_type": invoice_type,
 				"amount_paid": amount_paid,
+				"paid_at": add_days(now_datetime(), -days_ago),
 			}
 		)
 		invoice.name = f"summary-{frappe.generate_hash(length=8)}"

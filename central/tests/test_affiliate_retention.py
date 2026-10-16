@@ -31,9 +31,8 @@ class IntegrationTestAffiliateRetention(IntegrationTestCase):
 		self.assertEqual(
 			retention["curve"],
 			[
-				{"month": 1, "customers": 3, "still_paying": 3, "percent": 100},
-				{"month": 2, "customers": 2, "still_paying": 2, "percent": 100},
-				{"month": 3, "customers": 2, "still_paying": 1, "percent": 50},
+				{"month": 1, "customers": 2, "still_paying": 2, "percent": 100},
+				{"month": 2, "customers": 2, "still_paying": 1, "percent": 50},
 			],
 		)
 		self.assertEqual(
@@ -41,6 +40,15 @@ class IntegrationTestAffiliateRetention(IntegrationTestCase):
 			{"customers": 3, "active_30_days": 2, "active_90_days": 3},
 		)
 		self.assertEqual(retention["trend"], [0] * 8 + [2, 2, 2, 2])
+
+	def test_payments_before_the_referral_do_not_count(self):
+		self.customer("Old Customer", ["2026-01-05", "2026-02-05", "2026-04-05"], referred_on="2026-03-01")
+		self.customer("Old And Gone", ["2026-01-05"], referred_on="2026-03-01")
+
+		retention = self.retention()
+
+		self.assertEqual(retention["customers"], 1)
+		self.assertEqual(retention["trend"], [0] * 9 + [1, 0, 0])
 
 	def test_no_customers_yet(self):
 		self.assertEqual(
@@ -64,7 +72,7 @@ class IntegrationTestAffiliateRetention(IntegrationTestCase):
 		frappe.set_user(self.affiliate.user)
 		return get_retention()
 
-	def customer(self, label: str, paid_on: list[str]) -> None:
+	def customer(self, label: str, paid_on: list[str], referred_on: str = "2026-03-01") -> None:
 		owner = ensure_user(f"retention.{label.lower().replace(' ', '.')}@example.test")
 		team = frappe.get_doc(
 			{
@@ -74,13 +82,14 @@ class IntegrationTestAffiliateRetention(IntegrationTestCase):
 				"members": [{"user": owner, "role": "Owner", "status": "Active"}],
 			}
 		).insert()
-		frappe.get_doc(
+		referral = frappe.get_doc(
 			{
 				"doctype": "Product Referral",
 				"referred_team": team.name,
 				"affiliate": self.affiliate.name,
 			}
 		).insert()
+		referral.db_set("creation", f"{referred_on} 00:00:00", update_modified=False)
 		for day in paid_on:
 			invoice = frappe.get_doc(
 				{

@@ -22,11 +22,14 @@ def record_referral(team: str, product: str | None) -> None:
 	try:
 		referral = ProductReferral.record(team, product, visits[key])
 	except frappe.DuplicateEntryError:
-		# Another request credited this team and product first. The first referral is final.
+		# Another request credited this team and product first. The first referral is final, and
+		# the signup must not show Frappe's "already exists" message.
 		frappe.db.rollback(save_point="affiliate_referral")
+		frappe.clear_last_message()
 		return
 	except Exception:
 		frappe.db.rollback(save_point="affiliate_referral")
+		frappe.clear_last_message()
 		frappe.log_error(title="Affiliate referral failed", reference_doctype="Team", reference_name=team)
 		return
 

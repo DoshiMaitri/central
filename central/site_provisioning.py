@@ -24,6 +24,8 @@ SIGNUP_IMAGE_TAGS = {"has_site": "1", "frappe_version": "develop"}
 SIGNUP_APP_TAG = "app"
 # One DNS label: what a customer may name a site, and all the proxy will route.
 RESERVED_SUBDOMAINS = frozenset({"admin", "atlas", "cargo", "proxy", "site", "www"})
+# The length a team keeps of each UTM value.
+UTM_LENGTH = 140
 
 
 def create_trial_site(
@@ -98,15 +100,15 @@ def first_touch(
 	"""How the signup first found us, trimmed to fit the team. It only labels the team,
 	so a bad value is dropped instead of refusing the signup."""
 	return {
-		"utm_source": _clip(utm_source, 140),
-		"utm_medium": _clip(utm_medium, 140),
-		"utm_campaign": _clip(utm_campaign, 140),
-		"referrer": _clip(referrer, 1000),
+		"utm_source": clip(utm_source, UTM_LENGTH),
+		"utm_medium": clip(utm_medium, UTM_LENGTH),
+		"utm_campaign": clip(utm_campaign, UTM_LENGTH),
+		"referrer": clip(referrer, 1000),
 		"landing_product": product if product and frappe.db.exists("Product", product) else None,
 	}
 
 
-def _clip(value: str | None, length: int) -> str | None:
+def clip(value: str | None, length: int) -> str | None:
 	return (value.strip()[:length] or None) if isinstance(value, str) else None
 
 

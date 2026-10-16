@@ -36,6 +36,7 @@ def get_retention() -> dict:
 @frappe.whitelist(methods=["GET"])
 def get_links() -> list[dict]:
 	"""The caller's named links, newest first."""
+	# An affiliate holds no permission on links, so the read filters on the caller's own affiliate.
 	return frappe.get_all(
 		"Affiliate Link",
 		filters={"affiliate": get_active_affiliate()},
@@ -60,6 +61,7 @@ def create_link(
 @frappe.whitelist(methods=["GET"])
 def get_link_products() -> list[dict]:
 	"""The enabled products an affiliate link can name, for the link builder."""
+	# The enabled catalog is public, and an affiliate holds no permission on Product.
 	return frappe.get_all("Product", filters={"enabled": 1}, fields=["name", "title"], order_by="title asc")
 
 

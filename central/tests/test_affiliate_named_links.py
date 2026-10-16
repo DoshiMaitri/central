@@ -76,6 +76,20 @@ class IntegrationTestAffiliateNamedLinks(IntegrationTestCase):
 		with self.assertRaises(frappe.ValidationError):
 			create_link("no-campaign", utm_campaign="  ")
 
+	def test_a_slug_taken_in_a_race_says_so(self):
+		create_link(self.slug, utm_campaign="launch")
+		frappe.clear_messages()
+
+		with (
+			patch(
+				"central.signups.doctype.affiliate_link.affiliate_link.frappe.db.exists", return_value=None
+			),
+			self.assertRaisesRegex(frappe.ValidationError, "is taken"),
+		):
+			create_link(self.slug, utm_campaign="launch")
+
+		self.assertEqual(len(frappe.local.message_log), 1)
+
 	def test_only_an_active_affiliate_has_links(self):
 		create_link("mine", utm_campaign="launch")
 		frappe.set_user(self.other.user)

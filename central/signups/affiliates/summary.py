@@ -1,13 +1,15 @@
 from collections import defaultdict
-from datetime import date
+from datetime import date, datetime
 
 import frappe
 from frappe import _
 from frappe.query_builder import Order
 from frappe.query_builder.functions import Count, Date
-from frappe.utils import add_days, getdate
+from frappe.utils import add_days, get_datetime, getdate
 
 NONE_LABEL = "(none)"
+# The dates a summary may span. Each day is a row, and the period before is read as well.
+MAX_SUMMARY_DAYS = 366
 # Each step counts the referrals that reached it. A later step implies the earlier ones, so a
 # team that paid counts as having added billing and created a site.
 STEPS = ("visited", "signed_up", "created_site", "added_billing", "converted")
@@ -21,6 +23,8 @@ def get_affiliate_summary(affiliate: str, from_date: str | date, to_date: str | 
 	start, end = getdate(from_date), add_days(getdate(to_date), 1)
 	if start >= end:
 		frappe.throw(_("The start date must not be after the end date."))
+	if (end - start).days > MAX_SUMMARY_DAYS:
+		frappe.throw(_("Choose a period of at most {0} days.").format(MAX_SUMMARY_DAYS))
 
 	visits = get_visit_counts(affiliate, start, end)
 	referrals = get_referral_rows(affiliate, start, end)
@@ -86,33 +90,38 @@ def get_referral_rows(affiliate: str, start: date, end: date) -> list[dict]:
 
 def mark_steps(referrals: list[dict]) -> None:
 	teams = {row.referred_team for row in referrals}
-	paid_teams = get_paying_teams(teams)
+	payments = get_payments(teams)
 	product_teams = get_teams_with_product_referral(teams)
 	billing_teams = get_teams_with_payment_method(teams)
 	sites = get_team_sites(teams)
 
 	for row in referrals:
 		row.signed_up = 1
-		row.converted = is_converted(row, paid_teams, product_teams)
+		row.converted = is_converted(row, payments, product_teams)
 		row.added_billing = row.converted or row.referred_team in billing_teams
 		has_site = (row.referred_team, row.product) in sites if row.product else row.referred_team in sites
 		row.created_site = row.added_billing or has_site
 
 
-def is_converted(referral: dict, paid_teams: set[str], product_teams: set[str]) -> bool:
-	"""A team's payment belongs to its product referrals. A Frappe Cloud referral converts only
+def is_converted(referral: dict, payments: dict[str, list[datetime]], product_teams: set[str]) -> bool:
+	"""A team converts when it pays after the referral, so a team that already paid is not credited
+	for it. A team's payment belongs to its product referrals. A Frappe Cloud referral converts only
 	when the team has no product referral from any affiliate."""
-	return referral.referred_team in paid_teams and (
-		bool(referral.product) or referral.referred_team not in product_teams
-	)
+	referred_on = get_datetime(referral.creation)
+	has_paid = any(paid >= referred_on for paid in payments.get(referral.referred_team, []))
+	return has_paid and (bool(referral.product) or referral.referred_team not in product_teams)
 
 
-def get_paying_teams(teams: set[str]) -> set[str]:
-	"""Teams with a paid billable invoice that took real money. A refund does not undo it."""
+def get_payments(teams: set[str]) -> dict[str, list[datetime]]:
+	"""When each team paid a billable invoice that took real money. A refund does not undo it."""
 	if not teams:
-		return set()
+		return {}
 
-	return set(frappe.get_all("Invoice", filters=paid_invoice_filters(teams), pluck="team", distinct=True))
+	payments = defaultdict(list)
+	for invoice in frappe.get_all("Invoice", filters=paid_invoice_filters(teams), fields=["team", "paid_at"]):
+		payments[invoice.team].append(get_datetime(invoice.paid_at))
+
+	return payments
 
 
 def paid_invoice_filters(teams: set[str]) -> dict:
@@ -121,6 +130,7 @@ def paid_invoice_filters(teams: set[str]) -> dict:
 		"status": "Paid",
 		"invoice_type": "Billable",
 		"amount_paid": [">", 0],
+		"paid_at": ["is", "set"],
 	}
 
 

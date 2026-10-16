@@ -1,14 +1,12 @@
-from collections import defaultdict
 from datetime import date
 
 import frappe
 from frappe.utils import add_days, getdate, today
 
 from central.signups.affiliates.summary import (
-	get_paying_teams,
+	get_payments,
 	get_teams_with_product_referral,
 	is_converted,
-	paid_invoice_filters,
 )
 
 CURVE_MONTHS = 12
@@ -19,7 +17,7 @@ def get_affiliate_retention(affiliate: str) -> dict:
 	"""How long the affiliate's paying customers keep paying. A customer is active in a period when
 	it paid an invoice in it, and pays from its first paid invoice to its last."""
 	# The affiliate holds no permission on these records, so every read filters on the affiliate.
-	paid_days = get_paid_days(get_customer_teams(affiliate))
+	paid_days = get_customer_paid_days(affiliate)
 	day = getdate(today())
 	this_month = month_index(day)
 
@@ -43,34 +41,26 @@ def count_active(paid_days: dict[str, list[date]], since: date) -> int:
 	return sum(any(paid >= since for paid in days) for days in paid_days.values())
 
 
-def get_customer_teams(affiliate: str) -> set[str]:
+def get_customer_paid_days(affiliate: str) -> dict[str, list[date]]:
+	"""The days each converted customer paid on, from its first referral by the affiliate."""
 	referrals = frappe.get_all(
 		"Product Referral",
 		filters={"affiliate": affiliate},
-		fields=["referred_team", "product"],
+		fields=["referred_team", "product", "creation"],
 	)
-	teams = {row.referred_team for row in referrals}
-	paid_teams = get_paying_teams(teams)
-	product_teams = get_teams_with_product_referral(teams)
+	payments = get_payments({row.referred_team for row in referrals})
+	product_teams = get_teams_with_product_referral(set(payments))
 
-	return {row.referred_team for row in referrals if is_converted(row, paid_teams, product_teams)}
+	referred_on = {}
+	for row in referrals:
+		if is_converted(row, payments, product_teams):
+			team = row.referred_team
+			referred_on[team] = min(referred_on.get(team, row.creation), row.creation)
 
-
-def get_paid_days(teams: set[str]) -> dict[str, list[date]]:
-	"""The days on which each team paid an invoice."""
-	if not teams:
-		return {}
-
-	days = defaultdict(list)
-	invoices = frappe.get_all(
-		"Invoice",
-		filters={**paid_invoice_filters(teams), "paid_at": ["is", "set"]},
-		fields=["team", "paid_at"],
-	)
-	for invoice in invoices:
-		days[invoice.team].append(getdate(invoice.paid_at))
-
-	return days
+	return {
+		team: [getdate(paid) for paid in payments[team] if paid >= since]
+		for team, since in referred_on.items()
+	}
 
 
 def get_curve(first_paid: dict[str, int], last_paid: dict[str, int], this_month: int) -> list[dict]:
@@ -78,15 +68,15 @@ def get_curve(first_paid: dict[str, int], last_paid: dict[str, int], this_month:
 	first payment. A month counts once it is over, and only for customers whose first payment is
 	that far back, so recent customers do not pull the line down."""
 	curve = []
-	for offset in range(CURVE_MONTHS):
-		counted = [team for team, first in first_paid.items() if first + offset < this_month]
+	for month in range(1, CURVE_MONTHS + 1):
+		counted = [team for team, first in first_paid.items() if first + month < this_month]
 		if not counted:
 			break
 
-		still_paying = sum(last_paid[team] >= first_paid[team] + offset for team in counted)
+		still_paying = sum(last_paid[team] >= first_paid[team] + month for team in counted)
 		curve.append(
 			{
-				"month": offset + 1,
+				"month": month,
 				"customers": len(counted),
 				"still_paying": still_paying,
 				"percent": round(100 * still_paying / len(counted)),
