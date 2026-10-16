@@ -27,19 +27,17 @@ const rate = (row: FunnelRow): string =>
 <template>
 	<Dialog v-model="open" title="All countries" size="2xl">
 		<template #default>
-			<div class="max-h-[60vh] overflow-y-auto">
-				<Table :columns="columns" :rows="rows">
-					<template #label="{ row }">
-						<span class="flex items-center gap-2">
-							<span aria-hidden="true">
-								{{ flagEmoji(countryPlace(row.label)?.code) }}
-							</span>
-							{{ row.label }}
+			<Table :columns="columns" :rows="rows" height="flex max-h-[60vh] flex-col">
+				<template #label="{ row }">
+					<span class="flex items-center gap-2">
+						<span aria-hidden="true">
+							{{ flagEmoji(countryPlace(row.label)?.code) }}
 						</span>
-					</template>
-					<template #rate="{ row }">{{ rate(row) }}</template>
-				</Table>
-			</div>
+						{{ row.label }}
+					</span>
+				</template>
+				<template #rate="{ row }">{{ rate(row) }}</template>
+			</Table>
 		</template>
 	</Dialog>
 </template>
