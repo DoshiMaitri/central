@@ -27,7 +27,11 @@ const rate = (row: FunnelRow): string =>
 <template>
 	<Dialog v-model="open" title="All countries" size="2xl">
 		<template #default>
-			<Table :columns="columns" :rows="rows" height="flex max-h-[60vh] flex-col">
+			<Table
+				:columns="columns"
+				:rows="rows"
+				height="flex max-h-[60vh] flex-col"
+			>
 				<template #label="{ row }">
 					<span class="flex items-center gap-2">
 						<span aria-hidden="true">

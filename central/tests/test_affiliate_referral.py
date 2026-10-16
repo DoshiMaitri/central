@@ -12,6 +12,8 @@ from central.signups.doctype.affiliate.test_affiliate import make_affiliate
 from central.site_provisioning import create_trial_site, create_trial_team
 from central.tests.test_iam import ensure_user
 
+LOG_ERROR = "central.signups.affiliates.cookie.frappe.log_error"
+
 
 class IntegrationTestAffiliateReferral(IntegrationTestCase):
 	"""A signup is credited to the affiliate in the browser's cookie for that product, once."""
@@ -63,25 +65,26 @@ class IntegrationTestAffiliateReferral(IntegrationTestCase):
 		)
 		self.team.save()
 
-		errors = frappe.db.count("Error Log")
 		cases = {
 			"deleted visit": "no-such-visit",
 			"click outside the window": self.visit(last_clicked_on=add_days(now_datetime(), -31)),
 			"visit for another product": self.visit(product="referral-raven"),
 			"affiliate in the team": self.visit(affiliate=member),
 		}
-		for label, visit in cases.items():
-			with self.subTest(label):
-				self.browse({"fc": visit})
-				record_referral(self.team.name, None)
-				self.assertEqual(self.referral_count(), 0)
+		with patch(LOG_ERROR) as log_error:
+			for label, visit in cases.items():
+				with self.subTest(label):
+					self.browse({"fc": visit})
+					record_referral(self.team.name, None)
+					self.assertEqual(self.referral_count(), 0)
 
-		visit = self.visit()
-		frappe.db.set_value("Affiliate", self.affiliate, "status", "Disabled")
-		self.browse({"fc": visit})
-		record_referral(self.team.name, None)
-		self.assertEqual(self.referral_count(), 0)
-		self.assertEqual(frappe.db.count("Error Log"), errors)
+			visit = self.visit()
+			frappe.db.set_value("Affiliate", self.affiliate, "status", "Disabled")
+			self.browse({"fc": visit})
+			record_referral(self.team.name, None)
+			self.assertEqual(self.referral_count(), 0)
+
+		log_error.assert_not_called()
 
 	def test_the_first_referral_is_final(self):
 		first = self.visit()
@@ -97,26 +100,31 @@ class IntegrationTestAffiliateReferral(IntegrationTestCase):
 
 	def test_a_lost_race_is_not_an_error(self):
 		self.browse({"fc": self.visit()})
-		errors = frappe.db.count("Error Log")
 		record_referral(self.team.name, None)
 
 		self.browse({"fc": self.visit()})
-		with patch(
-			"central.signups.doctype.product_referral.product_referral.frappe.db.exists", return_value=None
+		with (
+			patch(
+				"central.signups.doctype.product_referral.product_referral.frappe.db.exists",
+				return_value=None,
+			),
+			patch(LOG_ERROR) as log_error,
 		):
 			record_referral(self.team.name, None)
 
 		self.assertEqual(self.referral_count(), 1)
-		self.assertEqual(frappe.db.count("Error Log"), errors)
+		log_error.assert_not_called()
 
 	def test_a_failure_is_logged_and_never_stops_the_signup(self):
 		self.browse({"fc": self.visit()})
-		errors = frappe.db.count("Error Log")
 
-		with patch("central.signups.affiliates.cookie.ProductReferral.record", side_effect=RuntimeError):
+		with (
+			patch("central.signups.affiliates.cookie.ProductReferral.record", side_effect=RuntimeError),
+			patch(LOG_ERROR) as log_error,
+		):
 			record_referral(self.team.name, None)
 
-		self.assertEqual(frappe.db.count("Error Log"), errors + 1)
+		log_error.assert_called_once()
 		self.assertEqual(self.referral_count(), 0)
 
 	def test_a_new_trial_team_is_credited_for_its_signup_product(self):
