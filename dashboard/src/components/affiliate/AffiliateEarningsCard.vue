@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { Tooltip } from 'frappe-ui'
 import { DonutChart } from 'frappe-ui/charts'
 import { computed } from 'vue'
 import Table from '@/components/common/Table.vue'
@@ -13,10 +12,6 @@ interface AffiliateEarningsCardProps {
 }
 
 const props = defineProps<AffiliateEarningsCardProps>()
-
-const PRODUCT_HELP =
-	'What each product earns you. Earnings per click (EPC) is the earnings divided by clicks.'
-const CAMPAIGN_HELP = 'How your earnings split across your campaigns.'
 
 const money = (value: number): string =>
 	`$${value.toLocaleString(undefined, { maximumFractionDigits: 0 })}`
@@ -72,15 +67,7 @@ const campaignSlices = computed(() =>
 		<section
 			class="flex min-w-0 flex-col gap-3 rounded-6 border border-outline-gray-1 bg-surface-base p-5"
 		>
-			<h2 class="flex items-center gap-1.5 text-base-semibold text-ink-gray-8">
-				Earnings by product
-				<Tooltip :text="PRODUCT_HELP">
-					<span
-						class="lucide-info size-3.5 text-ink-gray-4"
-						:aria-label="PRODUCT_HELP"
-					/>
-				</Tooltip>
-			</h2>
+			<h2 class="text-base-semibold text-ink-gray-8">Earnings by product</h2>
 			<p v-if="!productRows.length" class="text-p-sm text-ink-gray-5">
 				No visits or signups in this period.
 			</p>
@@ -94,15 +81,7 @@ const campaignSlices = computed(() =>
 		<section
 			class="flex min-w-0 flex-col gap-3 rounded-6 border border-outline-gray-1 bg-surface-base p-5"
 		>
-			<h2 class="flex items-center gap-1.5 text-base-semibold text-ink-gray-8">
-				Earnings by campaign
-				<Tooltip :text="CAMPAIGN_HELP">
-					<span
-						class="lucide-info size-3.5 text-ink-gray-4"
-						:aria-label="CAMPAIGN_HELP"
-					/>
-				</Tooltip>
-			</h2>
+			<h2 class="text-base-semibold text-ink-gray-8">Earnings by campaign</h2>
 			<p v-if="!campaignSlices.length" class="text-p-sm text-ink-gray-5">
 				No earnings in this period yet.
 			</p>
