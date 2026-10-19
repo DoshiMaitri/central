@@ -214,9 +214,7 @@ export function useAffiliate() {
 			),
 		),
 		byCountry: computed(() =>
-			toRows(summary.data?.by_country ?? [], (row) =>
-				row.country ?? 'Unknown',
-			),
+			toRows(summary.data?.by_country ?? [], (row) => row.country ?? 'Unknown'),
 		),
 		products: computed<LinkProduct[]>(() => products.data ?? []),
 	}
