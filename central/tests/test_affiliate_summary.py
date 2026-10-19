@@ -141,6 +141,18 @@ class IntegrationTestAffiliateSummary(IntegrationTestCase):
 		self.assertEqual((by_country["India"]["visited"], by_country["India"]["signed_up"]), (1, 1))
 		self.assertEqual(by_country["Germany"]["signed_up"], 0)
 
+	def test_a_plain_link_click_counts_for_the_product_the_person_chose(self):
+		plain = self.visit("youtube", None)
+		self.visit("youtube", None)
+		self.referral(self.team("Chose Raven"), "summary-raven", "youtube", visit=plain)
+
+		by_product = {row["product"]: row for row in self.summary()["by_product"]}
+
+		self.assertEqual(
+			(by_product["summary-raven"]["visited"], by_product["summary-raven"]["signed_up"]), (1, 1)
+		)
+		self.assertEqual((by_product[None]["visited"], by_product[None]["signed_up"]), (1, 0))
+
 	def test_a_product_referral_takes_the_conversion_from_a_frappe_cloud_referral(self):
 		team = self.team("Both")
 		self.referral(team, None, "youtube")

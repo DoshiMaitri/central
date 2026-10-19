@@ -26,7 +26,7 @@ All three DocTypes are in the Signups module. Only a System Manager can read, cr
 
 ### Affiliate Visit
 
-A visit holds the affiliate, the named link (empty for the main code), the product, the `utm_source`, `utm_medium` and `utm_campaign` of the link, the visitor's country and Last Clicked On. An empty product is a link to Frappe Cloud itself. A background job looks up the country from the visitor's IP address after the click, so the redirect does not wait. Central keeps only the country name, never the IP address or an email.
+A visit holds the affiliate, the named link (empty for the main code), the product, the `utm_source`, `utm_medium` and `utm_campaign` of the link, the visitor's country and Last Clicked On. An empty product is a link to Frappe Cloud itself. When a Product Referral for a product uses a visit with an empty product, the visit takes that product, so the click counts for the product the person chose. A background job looks up the country from the visitor's IP address after the click, so the redirect does not wait. Central keeps only the country name, never the IP address or an email.
 
 ### Product Referral
 
@@ -104,7 +104,7 @@ The visitor always reaches signup. Central records nothing when:
 
 ### Referral
 
-Central credits a signup in two places. Both read the visit for one product key in the cookie, and do not use the entry of another product.
+Central credits a signup in two places. Both read the visit for the product key in the cookie. When the cookie has no visit for that product, they read the `fc` visit, because a plain link counts for any product. A link for the product wins over a plain link. A visit for another product is never used.
 
 | When | Product key |
 |---|---|
@@ -113,13 +113,13 @@ Central credits a signup in two places. Both read the visit for one product key 
 
 Central creates the Product Referral only when all of these are true:
 
-- the cookie has a visit for the product key, and the visit exists and is for that product
+- the cookie has a visit to use, and the visit exists and is for that product or for no product
 - the visit's affiliate is Active now
 - the last click is not older than Affiliate Cookie Days, checked on the server
 - the affiliate is not a member of the Team
 - the Team has no referral for that product yet
 
-The referral copies the affiliate, the visit and the UTM values of the visit. Central then removes that product's entry from the cookie and keeps the others. The first referral for a Team and product is final. A later click on another affiliate's link records a visit and changes nothing else. A referral error is written to the Error Log, and the signup continues.
+The referral copies the affiliate, the visit and the UTM values of the visit. Central then removes the entry it used from the cookie and keeps the others. The first referral for a Team and product is final. A later click on another affiliate's link records a visit and changes nothing else. A referral error is written to the Error Log, and the signup continues.
 
 ### Summary
 

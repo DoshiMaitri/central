@@ -11,10 +11,12 @@ COOKIE_NAME = "central_affiliate"
 
 
 def record_referral(team: str, product: str | None) -> None:
-	"""Credit the affiliate whose link brought this signup for the product. A failure is logged and
-	never stops the signup."""
+	"""Credit the affiliate whose link brought this signup for the product. A link for the product
+	wins, and a plain link counts for any product. A failure is logged and never stops the signup."""
 	key = product or FRAPPE_CLOUD_PRODUCT_KEY
 	visits = read_visit_cookie()
+	if key not in visits:
+		key = FRAPPE_CLOUD_PRODUCT_KEY
 	if key not in visits:
 		return
 

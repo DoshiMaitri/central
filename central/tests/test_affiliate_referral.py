@@ -137,6 +137,19 @@ class IntegrationTestAffiliateReferral(IntegrationTestCase):
 		frappe.set_user("Administrator")
 		self.assertTrue(frappe.db.exists("Product Referral", f"{team}::referral-raven"))
 
+	def test_a_plain_link_credits_the_product_the_person_signs_up_for(self):
+		plain = self.visit()
+		self.browse({"fc": plain})
+		user = ensure_user("referral.plain@example.test")
+
+		frappe.set_user(user)
+		team = create_trial_team(user, signup_product="referral-raven")
+
+		frappe.set_user("Administrator")
+		self.assertEqual(frappe.db.get_value("Product Referral", f"{team}::referral-raven", "visit"), plain)
+		self.assertEqual(frappe.db.get_value("Affiliate Visit", plain, "product"), "referral-raven")
+		self.assertNotIn(COOKIE_NAME, frappe.local.cookie_manager.cookies)
+
 	def test_a_disabled_signup_product_counts_as_frappe_cloud(self):
 		frappe.db.set_value("Product", "referral-raven", "enabled", 0)
 		self.browse({"fc": self.visit()})

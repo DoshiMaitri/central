@@ -33,14 +33,15 @@ class ProductReferral(Document):
 	@classmethod
 	def record(cls, team: str, product: str | None, visit: str) -> Self | None:
 		"""Credit the visit's affiliate with the team's signup for the product, when the visit
-		still counts. The first referral for a team and product is final."""
+		still counts. A visit with no product, from a plain link, counts for any product. The first
+		referral for a team and product is final."""
 		if frappe.db.exists("Product Referral", referral_name(team, product)):
 			return None
 
 		row = frappe.db.get_value(
 			"Affiliate Visit", visit, ["affiliate", "product", "last_clicked_on", *UTM_FIELDS], as_dict=True
 		)
-		if not row or row.product != product or not is_creditable(team, row):
+		if not row or (row.product and row.product != product) or not is_creditable(team, row):
 			return None
 
 		referral = frappe.get_doc(
@@ -55,6 +56,17 @@ class ProductReferral(Document):
 		)
 		# The new customer signs up, and holds no permission on referrals.
 		return referral.insert(ignore_permissions=True)
+
+	def after_insert(self) -> None:
+		# A plain link's visit takes the product the person chose, so the click counts for it.
+		if self.product and self.visit:
+			frappe.db.set_value(
+				"Affiliate Visit",
+				{"name": self.visit, "product": ["is", "not set"]},
+				"product",
+				self.product,
+				update_modified=False,
+			)
 
 	def autoname(self) -> None:
 		# The name is the unique key, so the database rejects a second referral for a team and product.
