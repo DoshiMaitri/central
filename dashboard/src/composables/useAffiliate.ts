@@ -182,7 +182,7 @@ export function useAffiliate() {
 			product: null,
 			utm_source: null,
 			utm_campaign: null,
-			...(counts.get('(none)') ?? NO_COUNTS),
+			...(counts.get(null) ?? NO_COUNTS),
 		}
 		const named = (links.data ?? []).map((link) => ({
 			...link,
@@ -205,14 +205,17 @@ export function useAffiliate() {
 		totals,
 		linkRows,
 		bySource: computed(() =>
-			toRows(summary.data?.by_source ?? [], (row) => row.source),
+			toRows(summary.data?.by_source ?? [], (row) => row.source ?? 'No source'),
 		),
 		byProduct: computed(() =>
-			toRows(summary.data?.by_product ?? [], (row) => row.product),
+			toRows(
+				summary.data?.by_product ?? [],
+				(row) => row.product ?? 'Frappe Cloud',
+			),
 		),
 		byCountry: computed(() =>
 			toRows(summary.data?.by_country ?? [], (row) =>
-				row.country === '(none)' ? 'Unknown' : row.country,
+				row.country ?? 'Unknown',
 			),
 		),
 		products: computed<LinkProduct[]>(() => products.data ?? []),

@@ -34,10 +34,10 @@ export interface AffiliateSummary {
 	/** The same numbers for the period of the same length just before. */
 	previous_totals: FunnelCounts
 	daily: DailyCounts[]
-	by_link: (FunnelCounts & { link: string })[]
-	by_source: (FunnelCounts & { source: string })[]
-	by_product: (FunnelCounts & { product: string })[]
-	by_country: (FunnelCounts & { country: string })[]
+	by_link: (FunnelCounts & { link: string | null })[]
+	by_source: (FunnelCounts & { source: string | null })[]
+	by_product: (FunnelCounts & { product: string | null })[]
+	by_country: (FunnelCounts & { country: string | null })[]
 }
 
 /** A named link such as /r/bwh (get_links). */

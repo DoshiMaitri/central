@@ -21,17 +21,14 @@ const titles = computed(
 	() => new Map(props.products.map(({ name, title }) => [name, title])),
 )
 
-// Products earning the most first. "(none)" is Frappe Cloud itself.
+// Products earning the most first.
 const productRows = computed(() =>
 	props.byProduct
 		.map((row) => {
 			const earnings = sampleEarnings(row.converted)
 			return {
 				...row,
-				name:
-					row.label === '(none)'
-						? 'Frappe Cloud'
-						: (titles.value.get(row.label) ?? row.label),
+				name: titles.value.get(row.label) ?? row.label,
 				earnings,
 				rate: row.signed_up ? (row.converted / row.signed_up) * 100 : 0,
 				epc: row.visited ? earnings / row.visited : 0,

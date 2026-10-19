@@ -139,7 +139,7 @@ A Frappe Cloud (`fc`) referral converts only when its Team has no product referr
 
 Billing is in arrears, so a Team pays its first invoice some weeks after it signs up. A recent signup shows as not converted even when the customer will pay.
 
-The answer holds `totals`, `previous_totals` (the same numbers for the period of the same length just before), `daily` (clicks, signups and paying signups for every day, 0 on a quiet day; a paying signup counts on the day it signed up), `by_link` (the named link, or `(none)` for the main code), `by_source` (by `utm_source`), `by_product`, `by_country`. The link and country of a signup come from its visit. An empty source or product reads `(none)`. The answer never names a Team. Any other user, or an affiliate that is not Active, is refused.
+The answer holds `totals`, `previous_totals` (the same numbers for the period of the same length just before), `daily` (clicks, signups and paying signups for every day, 0 on a quiet day; a paying signup counts on the day it signed up), `by_link` (the named link, or `null` for the main code), `by_source` (by `utm_source`), `by_product`, `by_country`. The link and country of a signup come from its visit. An empty link, source, product or country is `null`. The answer never names a Team. Any other user, or an affiliate that is not Active, is refused.
 
 ### Retention
 

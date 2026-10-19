@@ -7,7 +7,6 @@ from frappe.query_builder import Order
 from frappe.query_builder.functions import Count, Date
 from frappe.utils import add_days, get_datetime, getdate
 
-NONE_LABEL = "(none)"
 # The dates a summary may span. Each day is a row, and the period before is read as well.
 MAX_SUMMARY_DAYS = 366
 # Each step counts the referrals that reached it. A later step implies the earlier ones, so a
@@ -193,10 +192,10 @@ def count(rows: list[dict]) -> dict:
 
 
 def group(rows: list[dict], field: str, label: str) -> list[dict]:
-	"""The funnel for each value of a field, largest first. An empty value reads "(none)"."""
+	"""The funnel for each value of a field, largest first. Empty values group under None."""
 	groups = defaultdict(list)
 	for row in rows:
-		groups[row[field] or NONE_LABEL].append(row)
+		groups[row[field] or None].append(row)
 
 	table = [{label: value, **count(group_rows)} for value, group_rows in groups.items()]
 	return sorted(table, key=lambda row: (row["visited"], row["signed_up"]), reverse=True)

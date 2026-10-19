@@ -66,7 +66,7 @@ class IntegrationTestAffiliateSummary(IntegrationTestCase):
 				"converted": 2,
 			},
 		)
-		self.assertEqual(by_source["(none)"]["visited"], 1)
+		self.assertEqual(by_source[None]["visited"], 1)
 		by_product = {row["product"]: row for row in summary["by_product"]}
 		self.assertEqual(
 			by_product["summary-raven"],
@@ -79,7 +79,7 @@ class IntegrationTestAffiliateSummary(IntegrationTestCase):
 				"converted": 1,
 			},
 		)
-		self.assertEqual(by_product["(none)"]["signed_up"], 3)
+		self.assertEqual(by_product[None]["signed_up"], 3)
 
 	def test_each_step_counts_the_teams_that_reached_it(self):
 		with_site = self.team("With Site")
@@ -136,7 +136,7 @@ class IntegrationTestAffiliateSummary(IntegrationTestCase):
 
 		by_link = {row["link"]: row for row in summary["by_link"]}
 		self.assertEqual((by_link["summary-link"]["visited"], by_link["summary-link"]["signed_up"]), (1, 1))
-		self.assertEqual(by_link["(none)"]["visited"], 1)
+		self.assertEqual(by_link[None]["visited"], 1)
 		by_country = {row["country"]: row for row in summary["by_country"]}
 		self.assertEqual((by_country["India"]["visited"], by_country["India"]["signed_up"]), (1, 1))
 		self.assertEqual(by_country["Germany"]["signed_up"], 0)
